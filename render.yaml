@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: facedb-backend
+    env: java
+    plan: free
+    buildCommand: cd CriminalDB/backend && mvn -DskipTests package
+    startCommand: cd CriminalDB/backend && java -jar target/facedb-0.1.0.jar
+    envVars:
+      - key: JAVA_VERSION
+        value: 17
+      - key: SPRING_PROFILES_ACTIVE
+        value: h2
+      - key: APP_JWT_SECRET
+        value: change-me-to-a-long-random-secret
