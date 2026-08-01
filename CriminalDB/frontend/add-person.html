@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>CriminalDB Register Criminal Profile</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div class="container" style="max-width: 1100px;">
+    <h1>Register New Criminal Profile</h1>
+    <p class="subtitle">Complete all biometric logs and details to publish a new record to the secure registry database.
+    </p>
+
+    <form id="add-form">
+      <div class="split-layout">
+        <!-- Left Column: Personal details -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h2>Personal Profile</h2>
+
+          <label for="fullName">Full Name</label>
+          <input type="text" id="fullName" required placeholder="Enter full name">
+
+          <label for="dob">Date of Birth</label>
+          <input type="date" id="dob" required>
+
+          <label for="gender">Gender</label>
+          <select id="gender" required>
+            <option value="" disabled selected>Select Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <label for="address">Last Known Address</label>
+          <input type="text" id="address" placeholder="Residential city / area details">
+
+          <label for="phoneNumber">Contact Phone Number</label>
+          <input type="text" id="phoneNumber" placeholder="e.g. +1-234-567-8900">
+
+          <label for="otherDetails">Physical Marks & Identification Notes</label>
+          <textarea id="otherDetails"
+            placeholder="Describe identifying markers, tattoos, heights, eye colors..."></textarea>
+        </div>
+
+        <!-- Right Column: Mugshot and Criminal Case details -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h2>Classified Crime Records</h2>
+
+          <label for="photo">Biometric Mugshot Photo</label>
+          <input type="file" id="photo" accept="image/jpeg,image/png,image/webp" required>
+          <div id="mugshot-preview-container" style="display:none; justify-content:center; margin-top:16px;">
+            <img id="mugshot-preview" src=""
+              style="width:120px; height:120px; border-radius:8px; object-fit:cover; border:2px solid var(--accent); box-shadow:0 0 10px rgba(0,229,255,0.25);">
+          </div>
+
+          <label for="criminalId">Criminal Reference ID</label>
+          <input type="text" id="criminalId" placeholder="e.g. CR-1023" required>
+
+          <label for="crimeCategory">Crime Category</label>
+          <input type="text" id="crimeCategory" placeholder="e.g. Robbery, Theft, Narcotics" required>
+
+          <label for="firNumber">FIR Reference Number</label>
+          <input type="text" id="firNumber" placeholder="e.g. FIR-98765" required>
+
+          <label for="policeStation">Responsible Police Station</label>
+          <input type="text" id="policeStation" placeholder="E.g. Central Precinct" required>
+
+          <label for="currentStatus">Current Case Status</label>
+          <select id="currentStatus" required>
+            <option value="" disabled selected>Select Status</option>
+            <option value="Active">Active / At Large</option>
+            <option value="Wanted">Wanted</option>
+            <option value="Arrested">Arrested / In Custody</option>
+            <option value="Bailed">Bailed / Parole</option>
+            <option value="Closed">Case Closed</option>
+          </select>
+
+          <label for="arrestDate">Arrest / Filing Date</label>
+          <input type="date" id="arrestDate" required>
+
+          <label for="crimeDescription">Official Crime Case Narrative</label>
+          <textarea id="crimeDescription" placeholder="Provide full context, witnesses, evidence logs..."></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions" style="justify-content: flex-end; margin-top: 24px;">
+        <button type="submit">Publish Case Record</button>
+        <button type="button" class="secondary" onclick="window.location.href='view-persons.html'">Abort File</button>
+      </div>
+      <div class="error-msg" id="error-msg" style="text-align: right;"></div>
+      <div class="success-msg" id="success-msg" style="text-align: right;"></div>
+    </form>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    initTopbar("add-person.html");
+
+    // Handle live photo preview
+    document.getElementById("photo").addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+          document.getElementById("mugshot-preview").src = evt.target.result;
+          document.getElementById("mugshot-preview-container").style.display = "flex";
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    document.getElementById("add-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const errorMsg = document.getElementById("error-msg");
+      const successMsg = document.getElementById("success-msg");
+      errorMsg.textContent = "";
+      successMsg.textContent = "";
+
+      const formData = new FormData();
+      formData.append("fullName", document.getElementById("fullName").value.trim());
+      formData.append("dateOfBirth", document.getElementById("dob").value);
+      formData.append("gender", document.getElementById("gender").value);
+      formData.append("address", document.getElementById("address").value.trim());
+      formData.append("phoneNumber", document.getElementById("phoneNumber").value.trim());
+      formData.append("otherDetails", document.getElementById("otherDetails").value.trim());
+
+      formData.append("criminalId", document.getElementById("criminalId").value.trim());
+      formData.append("crimeCategory", document.getElementById("crimeCategory").value.trim());
+      formData.append("firNumber", document.getElementById("firNumber").value.trim());
+      formData.append("policeStation", document.getElementById("policeStation").value.trim());
+      formData.append("currentStatus", document.getElementById("currentStatus").value);
+      formData.append("arrestDate", document.getElementById("arrestDate").value);
+      formData.append("crimeDescription", document.getElementById("crimeDescription").value.trim());
+
+      const photoFile = document.getElementById("photo").files[0];
+      if (photoFile) formData.append("photo", photoFile);
+
+      // Show loader on button
+      const submitBtn = e.target.querySelector("button[type=submit]");
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = "Writing Node logs...";
+      submitBtn.disabled = true;
+
+      try {
+        const res = await apiFetch("/persons", { method: "POST", body: formData });
+        if (!res.ok) {
+          const text = await res.text();
+          errorMsg.textContent = text || "Failed to publish record.";
+          submitBtn.textContent = originalText;
+          submitBtn.disabled = false;
+          return;
+        }
+        successMsg.textContent = "CASE RECORD PUBLISHED SECURELY.";
+        setTimeout(() => window.location.href = "view-persons.html", 800);
+      } catch (err) {
+        errorMsg.textContent = err.message || "An error occurred.";
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>CriminalDB · Security Audit Logs</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>Security Audit Logs</h1>
+    <p class="subtitle">Admin only. Every login, database search, edit, or record creation is recorded here dynamically
+      and cannot be cleared.</p>
+
+    <div class="glass-card">
+      <table id="audit-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Operator</th>
+            <th>Action Code</th>
+            <th>Target ID</th>
+            <th>IP Address</th>
+            <th>Dossier Activity Logs</th>
+          </tr>
+        </thead>
+        <tbody id="logs-tbody"></tbody>
+      </table>
+      <div class="empty-state" id="empty-state" style="display:none;">No audit entries recorded in this session.</div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    initTopbar("audit-logs.html");
+
+    if (!Auth.isAdmin()) {
+      alert("UNAUTHORIZED: Administrator access token required.");
+      window.location.href = "dashboard.html";
+    }
+
+    async function loadLogs() {
+      const res = await apiFetch("/audit");
+      if (!res.ok) return;
+      const logs = await res.json();
+      const tbody = document.getElementById("logs-tbody");
+      const emptyState = document.getElementById("empty-state");
+
+      if (logs.length === 0) {
+        emptyState.style.display = "block";
+        return;
+      }
+      emptyState.style.display = "none";
+
+      tbody.innerHTML = logs.map(l => {
+        let actionClass = "viewer";
+        const act = l.action || "";
+        if (act.includes("CREATE")) actionClass = "active";
+        else if (act.includes("DELETE") || act.includes("DENIED")) actionClass = "wanted";
+        else if (act.includes("UPDATE")) actionClass = "bailed";
+
+        return `
+          <tr>
+            <td style="font-family:'Orbitron',sans-serif; font-size:12px; color:var(--muted);">${formatDate(l.timestamp)}</td>
+            <td style="font-weight:700;">${l.username}</td>
+            <td><span class="pill ${actionClass}">${act}</span></td>
+            <td style="font-family:'Orbitron',sans-serif; color:var(--accent); font-weight:700;">${l.targetPersonId ?? "-"}</td>
+            <td style="color:var(--muted);">${l.ipAddress ?? "-"}</td>
+            <td style="font-size:13px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${l.details ?? "Action successfully completed."}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+    loadLogs();
+  </script>
+</body>
+
+</html>
