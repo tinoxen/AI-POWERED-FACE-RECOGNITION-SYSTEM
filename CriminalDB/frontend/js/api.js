@@ -1,6 +1,17 @@
 // Shared API helper for all pages.
-// Change this if your backend runs somewhere other than localhost:8080.
-const API_BASE = "http://localhost:8080/api";
+// Prefer an explicit override when the app is hosted somewhere else.
+function resolveApiBase() {
+  const override = window.__API_BASE__ || window.API_BASE_URL || "";
+  if (override) return override.replace(/\/$/, "");
+
+  if (window.location.port === "8080") {
+    return "/api";
+  }
+
+  return "http://localhost:8080/api";
+}
+
+const API_BASE = resolveApiBase();
 
 const Auth = {
   getToken() { return localStorage.getItem("CriminalDB_token"); },

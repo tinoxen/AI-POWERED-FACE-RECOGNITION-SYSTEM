@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>CriminalDB · Secure Access Node</title>
+  <title>CriminalDB · Secure</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -21,9 +21,9 @@
         <h1>🛡️ CriminalDB</h1>
         <div
           style="font-size: 11px; font-weight: 700; color: var(--accent); margin-top: 6px; letter-spacing: 0.15em; text-transform: uppercase;">
-          Secure Terminal Access</div>
+          Secure Access</div>
       </div>
-      <p class="subtitle" style="text-align: center; margin-bottom: 24px;">Authorized operations only. Node activity is
+      <p class="subtitle" style="text-align: center; margin-bottom: 24px;">Authorized operations only. Activity is
         recorded in security audit logs.</p>
 
       <form id="login-form">
@@ -42,7 +42,7 @@
         </div>
 
         <div class="form-actions" style="margin-top: 24px;">
-          <button type="submit" style="width:100%;">Authenticate Node</button>
+          <button type="submit" style="width:100%;">Authenticate</button>
         </div>
         <div class="error-msg" id="error-msg" style="text-align: center;"></div>
       </form>
@@ -80,7 +80,7 @@
         Auth.setSession(data.token, data.username, data.role);
         window.location.href = "dashboard.html";
       } catch (err) {
-        errorMsg.textContent = "COMMUNICATION FAILURE: Cannot establish node connection.";
+        errorMsg.textContent = "COMMUNICATION FAILURE: Cannot establish connection.";
       }
     });
   </script>

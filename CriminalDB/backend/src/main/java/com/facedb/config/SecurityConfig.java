@@ -71,10 +71,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Restrict this to your real frontend origin(s) before deploying.
-        configuration.setAllowedOrigins(List.of(
-            "http://localhost:5500", "http://127.0.0.1:5500",
-            "http://localhost:3000", "http://127.0.0.1:3000"
+        // Allow local development origins and the file:// fallback while keeping
+        // production access explicit through configuration overrides.
+        configuration.setAllowedOriginPatterns(List.of(
+            "http://localhost:*",
+            "http://127.0.0.1:*",
+            "null"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
