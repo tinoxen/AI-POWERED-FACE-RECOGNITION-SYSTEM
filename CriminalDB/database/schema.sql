@@ -5,8 +5,8 @@
 
 CREATE DATABASE IF NOT EXISTS facedb CHARACTER SET utf8mb4;
 
-CREATE USER IF NOT EXISTS 'facedb_user'@'localhost' IDENTIFIED BY 'admin';
-GRANT ALL PRIVILEGES ON facedb.* TO 'facedb_user'@'localhost';
+CREATE USER IF NOT EXISTS 'admin'@'localhost' IDENTIFIED BY '5623';
+GRANT ALL PRIVILEGES ON facedb.* TO 'admin'@'localhost';
 FLUSH PRIVILEGES;
 
 USE facedb;
