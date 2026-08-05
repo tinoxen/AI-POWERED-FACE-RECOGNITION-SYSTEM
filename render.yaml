@@ -11,4 +11,4 @@ services:
       - key: SPRING_PROFILES_ACTIVE
         value: h2
       - key: APP_JWT_SECRET
-        value: change-me-to-a-long-random-secret
+        value: 9f8365e544e4fd3fe196b72483937e28
