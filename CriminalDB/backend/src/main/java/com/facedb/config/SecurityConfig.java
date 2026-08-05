@@ -71,13 +71,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allow local development origins and the file:// fallback while keeping
-        // production access explicit through configuration overrides.
-        configuration.setAllowedOriginPatterns(List.of(
-            "http://localhost:*",
-            "http://127.0.0.1:*",
-            "null"
-        ));
+        // Allow origins configured via the ALLOWED_ORIGINS environment variable.
+        // If not set, allow all origins to enable access from Render-hosted frontends.
+        String allowed = System.getenv("ALLOWED_ORIGINS");
+        if (allowed == null || allowed.isBlank()) {
+            configuration.setAllowedOriginPatterns(List.of("*"));
+        } else {
+            String[] parts = allowed.split(",");
+            configuration.setAllowedOriginPatterns(List.of(parts));
+        }
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
