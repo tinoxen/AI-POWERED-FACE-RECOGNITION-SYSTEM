@@ -4,11 +4,7 @@ function resolveApiBase() {
   const override = window.__API_BASE__ || window.API_BASE_URL || "";
   if (override) return override.replace(/\/$/, "");
 
-  if (window.location.port === "8080") {
-    return "/api";
-  }
-
-  return "http://localhost:8080/api";
+  return "/api";
 }
 
 const API_BASE = resolveApiBase();

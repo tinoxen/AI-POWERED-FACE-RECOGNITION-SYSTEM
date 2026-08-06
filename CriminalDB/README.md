@@ -40,6 +40,17 @@ FaceDB/
 
 ## Running it
 
+### Docker / Render deployment
+
+The project now includes a Dockerfile and Render configuration so it can be hosted as a single web service.
+
+```bash
+docker build -t criminaldb .
+docker run -p 10000:10000 -e PORT=10000 criminaldb
+```
+
+For Render, connect the repository and create a new Web Service using the included [render.yaml](render.yaml). Render will build the container automatically and expose the app on its generated URL.
+
 ### 1. Backend
 
 Set up MySQL (or skip this and use the H2 profile below):

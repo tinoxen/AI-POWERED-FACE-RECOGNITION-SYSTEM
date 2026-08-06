@@ -56,6 +56,9 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) // stateless JWT API; CSRF not applicable here
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/index.html", "/login.html", "/dashboard.html", "/view-persons.html",
+                        "/add-person.html", "/edit-person.html", "/face-search.html", "/audit-logs.html",
+                        "/css/**", "/js/**", "/images/**", "/**/*.html").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/persons/*/photo").permitAll()
                 .requestMatchers("/api/persons/**").hasAnyRole("ADMIN", "OFFICER", "VIEWER")
