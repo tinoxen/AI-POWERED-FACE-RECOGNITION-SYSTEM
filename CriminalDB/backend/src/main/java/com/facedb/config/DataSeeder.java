@@ -25,9 +25,9 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (userRepository.count() == 0) {
-            User admin = new User("admin", passwordEncoder.encode("5623"), User.Role.ADMIN);
+            User admin = new User("spectre", passwordEncoder.encode("5623"), User.Role.ADMIN);
             userRepository.save(admin);
-            System.out.println("Seeded default admin user -> username: admin / password: 5623");
+            System.out.println("Seeded default admin user -> username: spectre / password: 5623");
             System.out.println("CHANGE THIS PASSWORD IMMEDIATELY.");
         }
     }

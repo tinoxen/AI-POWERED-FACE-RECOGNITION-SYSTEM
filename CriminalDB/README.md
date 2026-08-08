@@ -76,8 +76,8 @@ mvn spring-boot:run -Dspring-boot.run.profiles=h2
 On first startup the app seeds a default admin account:
 
 ```
-username: admin
-password: ChangeMe123!
+username: spectre
+password: 5623
 ```
 
 **Change this password immediately** — it's only there so the app is usable

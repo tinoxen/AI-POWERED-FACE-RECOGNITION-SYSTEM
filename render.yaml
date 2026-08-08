@@ -3,12 +3,22 @@ services:
     name: facedb-backend
     env: java
     plan: free
-    buildCommand: cd CriminalDB/backend && mvn -DskipTests package
+    buildCommand: cd CriminalDB/backend && ./mvnw -DskipTests package
     startCommand: cd CriminalDB/backend && java -jar target/facedb-0.1.0.jar
     envVars:
       - key: JAVA_VERSION
         value: 17
-      - key: SPRING_PROFILES_ACTIVE
-        value: h2
       - key: APP_JWT_SECRET
         value: 9f8365e544e4fd3fe196b72483937e28
+      - key: DB_HOST
+        value: ""
+      - key: DB_PORT
+        value: ""
+      - key: DB_NAME
+        value: ""
+      - key: DB_USERNAME
+        value: ""
+      - key: DB_PASSWORD
+        value: ""
+      - key: ALLOWED_ORIGINS
+        value: ""
