@@ -25,10 +25,21 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (userRepository.count() == 0) {
-            User admin = new User("spectre", passwordEncoder.encode("5623"), User.Role.ADMIN);
+            User admin = new User("admin", passwordEncoder.encode("5623"), User.Role.ADMIN);
             userRepository.save(admin);
-            System.out.println("Seeded default admin user -> username: spectre / password: 5623");
+            System.out.println("Seeded default admin user -> username: admin / password: 5623");
             System.out.println("CHANGE THIS PASSWORD IMMEDIATELY.");
+            return;
         }
+
+        // Migrate the original demo account without changing its BCrypt hash.
+        // Do not overwrite an account named "admin" if one was created later.
+        userRepository.findByUsername("spectre")
+                .filter(legacyAdmin -> userRepository.findByUsername("admin").isEmpty())
+                .ifPresent(legacyAdmin -> {
+                    legacyAdmin.setUsername("admin");
+                    userRepository.save(legacyAdmin);
+                    System.out.println("Renamed legacy default admin user from spectre to admin.");
+                });
     }
 }

@@ -3,9 +3,9 @@ services:
     name: criminaldb
     env: docker
     plan: free
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./backend/Dockerfile
     dockerContext: .
-    healthCheckPath: /
+    healthCheckPath: /api/health
     envVars:
       - key: PORT
         value: 10000
@@ -14,14 +14,14 @@ services:
       - key: APP_UPLOAD_DIR
         value: /tmp/uploads
       - key: ALLOWED_ORIGINS
-        value: https://*.onrender.com
+        value: https://criminaldb.onrender.com
       - key: DB_HOST
-        value: your-tidb-host
+        sync: false
       - key: DB_PORT
         value: 4000
       - key: DB_NAME
-        value: facedb
+        sync: false
       - key: DB_USERNAME
-        value: your-username
+        sync: false
       - key: DB_PASSWORD
-        value: your-password
+        sync: false

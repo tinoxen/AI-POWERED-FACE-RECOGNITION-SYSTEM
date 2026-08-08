@@ -45,11 +45,32 @@ FaceDB/
 The project now includes a Dockerfile and Render configuration so it can be hosted as a single web service.
 
 ```bash
-docker build -t criminaldb .
+docker build -f backend/Dockerfile -t criminaldb .
 docker run -p 10000:10000 -e PORT=10000 criminaldb
 ```
 
-For Render, connect the repository and create a new Web Service using the included [render.yaml](render.yaml). Render will build the container automatically and expose the app on its generated URL.
+For Render, connect the repository and create a new Web Service using the
+included [render.yaml](render.yaml). Render builds the container and serves
+both the API and frontend from the generated URL. The health check is
+`/api/health`.
+
+Before the first deploy, create a **Serverless** TiDB Cloud cluster and a
+database (for example, `facedb`). In the Render dashboard, set these required
+environment variables from TiDB Cloud's **Connect** dialog:
+
+| Render variable | TiDB Cloud value |
+| --- | --- |
+| `DB_HOST` | Host (without `https://`) |
+| `DB_PORT` | `4000` unless TiDB Cloud shows another port |
+| `DB_NAME` | The database name, e.g. `facedb` |
+| `DB_USERNAME` | TiDB Cloud SQL user |
+| `DB_PASSWORD` | That SQL user's password |
+
+TiDB Cloud requires TLS; the supplied JDBC URL enforces certificate and host
+verification. Add Render's outbound IP ranges to the cluster's IP allowlist,
+or temporarily allow all IPs for an initial demo. After the service is live,
+replace `https://criminaldb.onrender.com` in `ALLOWED_ORIGINS` with the actual
+Render URL if it differs.
 
 ### 1. Backend
 
@@ -76,7 +97,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=h2
 On first startup the app seeds a default admin account:
 
 ```
-username: spectre
+username: admin
 password: 5623
 ```
 
