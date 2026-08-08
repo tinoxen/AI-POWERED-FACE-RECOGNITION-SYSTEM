@@ -4,6 +4,16 @@ function resolveApiBase() {
   const override = window.__API_BASE__ || window.API_BASE_URL || "";
   if (override) return override.replace(/\/$/, "");
 
+  // During local development the static frontend is commonly served on
+  // localhost:5500 while Spring Boot listens on port 10000. In production
+  // both are served by Spring Boot, so a relative URL remains the right one.
+  const isLocalStaticServer =
+    ["localhost", "127.0.0.1"].includes(window.location.hostname) &&
+    window.location.port === "5500";
+  if (isLocalStaticServer) {
+    return `${window.location.protocol}//${window.location.hostname}:10000/api`;
+  }
+
   return "/api";
 }
 

@@ -65,6 +65,7 @@ environment variables from TiDB Cloud's **Connect** dialog:
 | `DB_NAME` | The database name, e.g. `facedb` |
 | `DB_USERNAME` | TiDB Cloud SQL user |
 | `DB_PASSWORD` | That SQL user's password |
+| `APP_JWT_SECRET` | A random secret of at least 32 characters |
 
 TiDB Cloud requires TLS; the supplied JDBC URL enforces certificate and host
 verification. Add Render's outbound IP ranges to the cluster's IP allowlist,
