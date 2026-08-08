@@ -71,9 +71,13 @@
         });
 
         if (!res.ok) {
-          errorMsg.textContent = "ACCESS DENIED: Invalid operator ID or password.";
-          return;
-        }
+    const errorText = await res.text();
+    console.log("LOGIN STATUS:", res.status);
+    console.log("LOGIN RESPONSE:", errorText);
+
+    errorMsg.textContent = `LOGIN FAILED (${res.status}): ${errorText}`;
+    return;
+}
 
         const data = await res.json();
         Auth.setSession(data.token, data.username, data.role);
