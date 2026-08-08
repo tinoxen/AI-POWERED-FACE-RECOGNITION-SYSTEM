@@ -13,10 +13,16 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
@@ -41,11 +47,26 @@ public class AuthController {
             return ResponseEntity.status(401).body("Invalid username or password");
         }
 
-        User user = userService.getByUsername(request.getUsername());
-        String token = jwtService.generateToken(user.getUsername(), user.getRole().name());
+        try {
+            User user = userService.getByUsername(request.getUsername());
+            String token = jwtService.generateToken(user.getUsername(), user.getRole().name());
 
-        auditService.log(user.getUsername(), "LOGIN", null, null, httpRequest.getRemoteAddr());
+            try {
+                auditService.log(user.getUsername(), "LOGIN", null, null, httpRequest.getRemoteAddr());
+            } catch (RuntimeException auditFailure) {
+                // Authentication has succeeded; an unavailable audit table must not prevent
+                // the operator from receiving a valid session. The failure remains visible
+                // in server logs for immediate database repair.
+                log.error("Login audit write failed for user {}", user.getUsername(), auditFailure);
+            }
 
-        return ResponseEntity.ok(new LoginResponse(token, user.getUsername(), user.getRole().name()));
+            return ResponseEntity.ok(new LoginResponse(token, user.getUsername(), user.getRole().name()));
+        } catch (RuntimeException processingFailure) {
+            log.error("Login session creation failed for user {}", request.getUsername(), processingFailure);
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "error", "LOGIN_SESSION_CREATION_FAILED",
+                    "message", "The server could not create a login session. Check the server logs."
+            ));
+        }
     }
 }

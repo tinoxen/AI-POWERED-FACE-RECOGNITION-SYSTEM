@@ -59,7 +59,7 @@ public class SecurityConfig {
                 .requestMatchers("/", "/index.html", "/login.html", "/dashboard.html", "/view-persons.html",
                         "/add-person.html", "/edit-person.html", "/face-search.html", "/audit-logs.html",
                         "/css/**", "/js/**", "/images/**", "/**/*.html").permitAll()
-                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/auth/**", "/api/health").permitAll()
                 .requestMatchers("/api/persons/*/photo").permitAll()
                 .requestMatchers("/api/persons/**").hasAnyRole("ADMIN", "OFFICER", "VIEWER")
                 .requestMatchers("/api/persons/*/delete", "/api/persons/*/edit").hasRole("ADMIN")
