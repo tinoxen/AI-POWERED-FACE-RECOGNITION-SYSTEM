@@ -71,24 +71,15 @@
           body: JSON.stringify({ username, password })
         });
 
-<<<<<<< HEAD
         if (res.status === 401) {
           errorMsg.textContent = "ACCESS DENIED: Invalid operator ID or password.";
           return;
         }
-=======
-        if (!res.ok) {
-    const errorText = await res.text();
-    console.log("LOGIN STATUS:", res.status);
-    console.log("LOGIN RESPONSE:", errorText);
-
-    errorMsg.textContent = `LOGIN FAILED (${res.status}): ${errorText}`;
-    return;
-}
->>>>>>> 3ddaa1dd6abc19c0f50160dd56dbee75eecd70b4
 
         if (!res.ok) {
-          errorMsg.textContent = `SERVICE ERROR: Login service returned ${res.status}. Ensure the backend is running.`;
+          const errorText = await res.text();
+          console.error("LOGIN STATUS:", res.status, errorText);
+          errorMsg.textContent = `SERVICE ERROR (${res.status}): ${errorText || "The backend could not complete login."}`;
           return;
         }
 
