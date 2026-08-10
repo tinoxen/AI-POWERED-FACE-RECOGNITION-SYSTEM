@@ -7,6 +7,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,28 +17,50 @@ public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
 
-    public UserService(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public UserService(
+            UserRepository userRepository) {
+
+        this.userRepository =
+                userRepository;
     }
 
     @Override
-    public UserDetails loadUserByUsername(String username)
+    public UserDetails loadUserByUsername(
+            String username)
             throws UsernameNotFoundException {
 
-        if (username == null || username.isBlank()) {
-            throw new UsernameNotFoundException("Username cannot be empty");
+        if (username == null ||
+                username.isBlank()) {
+
+            throw new UsernameNotFoundException(
+                    "Username cannot be empty"
+            );
         }
 
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() ->
-                        new UsernameNotFoundException(
-                                "User not found: " + username
-                        )
-                );
+        User user =
+                userRepository
+                        .findByUsername(username.trim())
+                        .orElseThrow(() ->
+                                new UsernameNotFoundException(
+                                        "User not found: " +
+                                                username
+                                )
+                        );
 
         if (user.getRole() == null) {
+
             throw new IllegalStateException(
-                    "User has no role assigned: " + username
+                    "User has no role assigned: " +
+                            username
+            );
+        }
+
+        if (user.getPasswordHash() == null ||
+                user.getPasswordHash().isBlank()) {
+
+            throw new IllegalStateException(
+                    "User has no password hash: " +
+                            username
             );
         }
 
@@ -48,7 +71,8 @@ public class UserService implements UserDetailsService {
                 .authorities(
                         List.of(
                                 new SimpleGrantedAuthority(
-                                        "ROLE_" + user.getRole().name()
+                                        "ROLE_" +
+                                                user.getRole().name()
                                 )
                         )
                 )
@@ -56,18 +80,23 @@ public class UserService implements UserDetailsService {
                 .build();
     }
 
-    public User getByUsername(String username) {
+    public User getByUsername(
+            String username) {
 
-        if (username == null || username.isBlank()) {
+        if (username == null ||
+                username.isBlank()) {
+
             throw new UsernameNotFoundException(
                     "Username cannot be empty"
             );
         }
 
-        return userRepository.findByUsername(username)
+        return userRepository
+                .findByUsername(username.trim())
                 .orElseThrow(() ->
                         new UsernameNotFoundException(
-                                "User not found: " + username
+                                "User not found: " +
+                                        username
                         )
                 );
     }
