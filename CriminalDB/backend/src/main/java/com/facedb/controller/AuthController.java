@@ -17,9 +17,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationServiceException;
+import org.springframework.security.authentication.AuthenticationException;
 import org.springframework.security.authentication.BadCredentialsException;
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import org.springframework.web.bind.annotation.*;
 
@@ -43,10 +46,17 @@ public class AuthController {
             JwtService jwtService,
             AuditService auditService) {
 
-        this.authenticationManager = authenticationManager;
-        this.userService = userService;
-        this.jwtService = jwtService;
-        this.auditService = auditService;
+        this.authenticationManager =
+                authenticationManager;
+
+        this.userService =
+                userService;
+
+        this.jwtService =
+                jwtService;
+
+        this.auditService =
+                auditService;
     }
 
     @PostMapping("/login")
@@ -54,51 +64,67 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest) {
 
-        String username = request.getUsername();
+        String username =
+                request.getUsername() == null
+                        ? ""
+                        : request.getUsername().trim();
+
+        String password =
+                request.getPassword();
+
+        if (username.isBlank() ||
+                password == null ||
+                password.isBlank()) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(Map.of(
+                            "error",
+                            "INVALID_REQUEST",
+                            "message",
+                            "Username and password are required"
+                    ));
+        }
 
         /*
-         * STEP 1: Authenticate username/password
+         * 1. Authenticate username/password.
          */
         try {
 
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             username,
-                            request.getPassword()
+                            password
                     )
             );
 
         } catch (BadCredentialsException e) {
 
-            log.warn("Failed login attempt for user: {}", username);
+            log.warn(
+                    "Invalid credentials for user {}",
+                    username
+            );
 
-            try {
-                auditService.log(
-                        username,
-                        "LOGIN_FAILED",
-                        null,
-                        "Bad credentials",
-                        httpRequest.getRemoteAddr()
-                );
-            } catch (RuntimeException auditException) {
-                log.error(
-                        "Failed to write LOGIN_FAILED audit record for {}",
-                        username,
-                        auditException
-                );
-            }
+            writeAuditSafely(
+                    username,
+                    "LOGIN_FAILED",
+                    "Bad credentials",
+                    httpRequest
+            );
 
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of(
-                            "error", "INVALID_CREDENTIALS",
-                            "message", "Invalid username or password"
+                            "error",
+                            "INVALID_CREDENTIALS",
+                            "message",
+                            "Invalid username or password"
                     ));
 
-        } catch (AuthenticationServiceException e) {
+        } catch (AuthenticationException e) {
 
             log.error(
-                    "Authentication service failed for user {}",
+                    "Authentication failed for user {}",
                     username,
                     e
             );
@@ -106,8 +132,10 @@ public class AuthController {
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of(
-                            "error", "AUTHENTICATION_SERVICE_ERROR",
-                            "message", "Authentication service is unavailable"
+                            "error",
+                            "AUTHENTICATION_ERROR",
+                            "message",
+                            "Authentication service could not complete the request"
                     ));
 
         } catch (RuntimeException e) {
@@ -121,35 +149,27 @@ public class AuthController {
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of(
-                            "error", "AUTHENTICATION_ERROR",
-                            "message", "An authentication error occurred"
+                            "error",
+                            "AUTHENTICATION_ERROR",
+                            "message",
+                            "An unexpected authentication error occurred"
                     ));
         }
 
         /*
-         * STEP 2: Get the user
+         * 2. Load the authenticated user.
          */
         User user;
 
         try {
 
-            user = userService.getByUsername(username);
+            user =
+                    userService.getByUsername(username);
 
-            if (user == null) {
-                log.error("UserService returned null for username {}", username);
-
-                return ResponseEntity
-                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(Map.of(
-                                "error", "USER_NOT_FOUND",
-                                "message", "User account could not be loaded"
-                        ));
-            }
-
-        } catch (RuntimeException e) {
+        } catch (UsernameNotFoundException e) {
 
             log.error(
-                    "Failed to load user {} after authentication",
+                    "Authenticated user could not be loaded: {}",
                     username,
                     e
             );
@@ -157,33 +177,74 @@ public class AuthController {
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of(
-                            "error", "USER_LOAD_FAILED",
-                            "message", "Could not load user information"
+                            "error",
+                            "USER_LOAD_FAILED",
+                            "message",
+                            "Authenticated user could not be loaded"
+                    ));
+
+        } catch (RuntimeException e) {
+
+            log.error(
+                    "Database/user loading error for {}",
+                    username,
+                    e
+            );
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error",
+                            "USER_LOAD_FAILED",
+                            "message",
+                            "Could not load user information"
+                    ));
+        }
+
+        if (user == null) {
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error",
+                            "USER_NOT_FOUND",
+                            "message",
+                            "User account could not be loaded"
                     ));
         }
 
         /*
-         * STEP 3: Generate JWT
+         * 3. Validate account role.
+         */
+        if (user.getRole() == null) {
+
+            log.error(
+                    "User {} has no role",
+                    username
+            );
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error",
+                            "USER_ROLE_MISSING",
+                            "message",
+                            "User account has no assigned role"
+                    ));
+        }
+
+        /*
+         * 4. Generate JWT.
          */
         String token;
 
         try {
 
-            if (user.getRole() == null) {
-                log.error("User {} has no role assigned", username);
-
-                return ResponseEntity
-                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(Map.of(
-                                "error", "USER_ROLE_MISSING",
-                                "message", "User account has no assigned role"
-                        ));
-            }
-
-            token = jwtService.generateToken(
-                    user.getUsername(),
-                    user.getRole().name()
-            );
+            token =
+                    jwtService.generateToken(
+                            user.getUsername(),
+                            user.getRole().name()
+                    );
 
         } catch (RuntimeException e) {
 
@@ -196,37 +257,27 @@ public class AuthController {
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of(
-                            "error", "JWT_GENERATION_FAILED",
-                            "message", "Could not create login session"
+                            "error",
+                            "JWT_GENERATION_FAILED",
+                            "message",
+                            "Could not create login session"
                     ));
         }
 
         /*
-         * STEP 4: Audit successful login
+         * 5. Audit successful login.
          *
-         * Audit failure must NOT prevent successful authentication.
+         * Audit failure must NOT prevent login.
          */
-        try {
-
-            auditService.log(
-                    user.getUsername(),
-                    "LOGIN",
-                    null,
-                    null,
-                    httpRequest.getRemoteAddr()
-            );
-
-        } catch (RuntimeException e) {
-
-            log.error(
-                    "Login audit write failed for user {}",
-                    user.getUsername(),
-                    e
-            );
-        }
+        writeAuditSafely(
+                user.getUsername(),
+                "LOGIN",
+                null,
+                httpRequest
+        );
 
         /*
-         * STEP 5: Return successful login response
+         * 6. Return token.
          */
         return ResponseEntity.ok(
                 new LoginResponse(
@@ -235,5 +286,32 @@ public class AuthController {
                         user.getRole().name()
                 )
         );
+    }
+
+    private void writeAuditSafely(
+            String username,
+            String action,
+            String details,
+            HttpServletRequest request) {
+
+        try {
+
+            auditService.log(
+                    username,
+                    action,
+                    null,
+                    details,
+                    request.getRemoteAddr()
+            );
+
+        } catch (RuntimeException e) {
+
+            log.error(
+                    "Audit logging failed for user {} action {}",
+                    username,
+                    action,
+                    e
+            );
+        }
     }
 }
