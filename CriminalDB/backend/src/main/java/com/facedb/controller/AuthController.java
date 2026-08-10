@@ -16,11 +16,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import org.springframework.security.authentication.AuthenticationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import org.springframework.web.bind.annotation.*;
@@ -63,9 +62,10 @@ public class AuthController {
 
         String password = request.getPassword();
 
-        if (username.isBlank() ||
-                password == null ||
-                password.isBlank()) {
+        // Validate request
+        if (username.isBlank()
+                || password == null
+                || password.isBlank()) {
 
             return ResponseEntity
                     .badRequest()
@@ -77,7 +77,11 @@ public class AuthController {
                     ));
         }
 
-        // Authenticate username and password
+        /*
+         * =====================================================
+         * 1. AUTHENTICATE USERNAME + PASSWORD
+         * =====================================================
+         */
         try {
 
             authenticationManager.authenticate(
@@ -145,7 +149,11 @@ public class AuthController {
                     ));
         }
 
-        // Load user
+        /*
+         * =====================================================
+         * 2. LOAD USER
+         * =====================================================
+         */
         User user;
 
         try {
@@ -199,7 +207,11 @@ public class AuthController {
                     ));
         }
 
-        // Check role
+        /*
+         * =====================================================
+         * 3. CHECK USER ROLE
+         * =====================================================
+         */
         if (user.getRole() == null) {
 
             log.error(
@@ -217,7 +229,11 @@ public class AuthController {
                     ));
         }
 
-        // Generate JWT
+        /*
+         * =====================================================
+         * 4. GENERATE JWT
+         * =====================================================
+         */
         String token;
 
         try {
@@ -245,7 +261,13 @@ public class AuthController {
                     ));
         }
 
-        // Audit successful login
+        /*
+         * =====================================================
+         * 5. WRITE AUDIT LOG
+         *
+         * Audit failure must NOT prevent successful login.
+         * =====================================================
+         */
         writeAuditSafely(
                 user.getUsername(),
                 "LOGIN",
@@ -253,7 +275,11 @@ public class AuthController {
                 httpRequest
         );
 
-        // Return JWT
+        /*
+         * =====================================================
+         * 6. RETURN LOGIN RESPONSE
+         * =====================================================
+         */
         return ResponseEntity.ok(
                 new LoginResponse(
                         token,
@@ -263,6 +289,11 @@ public class AuthController {
         );
     }
 
+    /*
+     * =========================================================
+     * SAFE AUDIT LOGGING
+     * =========================================================
+     */
     private void writeAuditSafely(
             String username,
             String action,
