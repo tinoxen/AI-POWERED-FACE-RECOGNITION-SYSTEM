@@ -8,18 +8,29 @@ COPY backend/.mvn backend/.mvn
 COPY backend/src backend/src
 
 RUN chmod +x backend/mvnw
-RUN ./backend/mvnw -f backend/pom.xml clean package -DskipTests
+
+RUN ./backend/mvnw \
+    -f backend/pom.xml \
+    clean package \
+    -DskipTests
 
 
 FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
-COPY --from=build /workspace/backend/target/*.jar /app/app.jar
+COPY --from=build \
+    /workspace/backend/target/*.jar \
+    /app/app.jar
+
 COPY frontend /app/frontend
 
 ENV APP_STATIC_DIR=/app/frontend
 
 EXPOSE 10000
 
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT [
+    "java",
+    "-jar",
+    "/app/app.jar"
+]
