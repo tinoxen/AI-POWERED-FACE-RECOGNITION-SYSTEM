@@ -1,24 +1,36 @@
 services:
   - type: web
-    name: facedb-backend
-    env: java
+    name: criminaldb
+    env: docker
     plan: free
-    buildCommand: cd CriminalDB/backend && ./mvnw -DskipTests package
-    startCommand: cd CriminalDB/backend && java -jar target/facedb-0.1.0.jar
+    dockerfilePath: ./CriminalDB/Dockerfile
+    dockerContext: ./CriminalDB
+    healthCheckPath: /api/health
+
     envVars:
-      - key: JAVA_VERSION
-        value: 17
+      - key: PORT
+        value: 10000
+
       - key: APP_JWT_SECRET
-        value: 9f8365e544e4fd3fe196b72483937e28
-      - key: DB_HOST
-        value: ""
-      - key: DB_PORT
-        value: ""
-      - key: DB_NAME
-        value: ""
-      - key: DB_USERNAME
-        value: ""
-      - key: DB_PASSWORD
-        value: ""
+        generateValue: true
+
+      - key: APP_UPLOAD_DIR
+        value: /tmp/uploads
+
       - key: ALLOWED_ORIGINS
-        value: ""
+        value: https://criminaldb-lu4d.onrender.com
+
+      - key: DB_HOST
+        sync: false
+
+      - key: DB_PORT
+        value: 4000
+
+      - key: DB_NAME
+        sync: false
+
+      - key: DB_USERNAME
+        sync: false
+
+      - key: DB_PASSWORD
+        sync: false
