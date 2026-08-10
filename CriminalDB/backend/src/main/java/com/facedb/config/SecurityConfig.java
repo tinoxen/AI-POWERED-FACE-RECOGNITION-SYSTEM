@@ -1,19 +1,25 @@
 package com.facedb.config;
 
 import com.facedb.security.JwtAuthFilter;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -39,6 +45,7 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration config) throws Exception {
+
         return config.getAuthenticationManager();
     }
 
@@ -65,72 +72,94 @@ public class SecurityConfig {
                 cors.configurationSource(corsConfigurationSource())
             )
 
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf ->
+                csrf.disable()
+            )
 
             .sessionManagement(session ->
                 session.sessionCreationPolicy(
-                        SessionCreationPolicy.STATELESS
+                    SessionCreationPolicy.STATELESS
                 )
             )
 
             .authorizeHttpRequests(auth -> auth
 
-                // Public frontend
+                // ==============================
+                // PUBLIC FRONTEND
+                // ==============================
+
                 .requestMatchers(
-                        "/",
-                        "/index.html",
-                        "/login.html",
-                        "/dashboard.html",
-                        "/view-persons.html",
-                        "/add-person.html",
-                        "/edit-person.html",
-                        "/face-search.html",
-                        "/audit-logs.html",
-                        "/css/**",
-                        "/js/**",
-                        "/images/**",
-                        "/**/*.html"
+                    "/",
+                    "/index.html",
+                    "/login.html",
+                    "/dashboard.html",
+                    "/view-persons.html",
+                    "/add-person.html",
+                    "/edit-person.html",
+                    "/face-search.html",
+                    "/audit-logs.html",
+
+                    "/css/**",
+                    "/js/**",
+                    "/images/**"
                 ).permitAll()
 
-                // Public API
+                // ==============================
+                // PUBLIC API
+                // ==============================
+
                 .requestMatchers(
-                        "/api/auth/**",
-                        "/api/health"
+                    "/api/auth/**",
+                    "/api/health"
                 ).permitAll()
 
-                // Public person photos
+                // ==============================
+                // PUBLIC PERSON PHOTOS
+                // ==============================
+
                 .requestMatchers(
-                        "/api/persons/*/photo"
+                    "/api/persons/*/photo"
                 ).permitAll()
 
-                // IMPORTANT:
-                // Specific ADMIN rules must come BEFORE /api/persons/**
+                // ==============================
+                // ADMIN PERSON OPERATIONS
+                // ==============================
+
                 .requestMatchers(
-                        "/api/persons/*/delete",
-                        "/api/persons/*/edit"
+                    "/api/persons/*/delete",
+                    "/api/persons/*/edit"
                 ).hasRole("ADMIN")
 
-                // General person access
+                // ==============================
+                // PERSON API
+                // ==============================
+
                 .requestMatchers(
-                        "/api/persons/**"
+                    "/api/persons/**"
                 ).hasAnyRole(
-                        "ADMIN",
-                        "OFFICER",
-                        "VIEWER"
+                    "ADMIN",
+                    "OFFICER",
+                    "VIEWER"
                 )
 
-                // Audit logs
+                // ==============================
+                // AUDIT LOGS
+                // ==============================
+
                 .requestMatchers(
-                        "/api/audit/**"
+                    "/api/audit/**"
                 ).hasRole("ADMIN")
 
-                // Everything else requires authentication
+                // ==============================
+                // EVERYTHING ELSE
+                // ==============================
+
                 .anyRequest().authenticated()
             )
 
             .addFilterBefore(
-                    jwtAuthFilter,
-                    UsernamePasswordAuthenticationFilter.class
+                jwtAuthFilter,
+                UsernamePasswordAuthenticationFilter.class
             );
 
         return http.build();
@@ -149,31 +178,31 @@ public class SecurityConfig {
                 allowedOrigins.isBlank()) {
 
             configuration.setAllowedOriginPatterns(
-                    List.of("*")
+                List.of("*")
             );
 
         } else {
 
             configuration.setAllowedOriginPatterns(
-                    Arrays.stream(allowedOrigins.split(","))
-                            .map(String::trim)
-                            .filter(s -> !s.isBlank())
-                            .toList()
+                Arrays.stream(allowedOrigins.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isBlank())
+                    .toList()
             );
         }
 
         configuration.setAllowedMethods(
-                List.of(
-                        "GET",
-                        "POST",
-                        "PUT",
-                        "DELETE",
-                        "OPTIONS"
-                )
+            List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "OPTIONS"
+            )
         );
 
         configuration.setAllowedHeaders(
-                List.of("*")
+            List.of("*")
         );
 
         configuration.setAllowCredentials(true);
@@ -182,8 +211,8 @@ public class SecurityConfig {
                 new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration(
-                "/**",
-                configuration
+            "/**",
+            configuration
         );
 
         return source;
