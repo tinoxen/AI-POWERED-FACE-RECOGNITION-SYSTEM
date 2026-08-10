@@ -18,6 +18,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -32,62 +33,159 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // BCrypt as requested - never store plaintext or reversibly-encrypted passwords.
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
     @Bean
-    public DaoAuthenticationProvider authenticationProvider(UserDetailsService uds, PasswordEncoder encoder) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(uds);
-        provider.setPasswordEncoder(encoder);
+    public DaoAuthenticationProvider authenticationProvider(
+            UserDetailsService userDetailsService,
+            PasswordEncoder passwordEncoder) {
+
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider();
+
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+
         return provider;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http) throws Exception {
+
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable()) // stateless JWT API; CSRF not applicable here
-            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .cors(cors ->
+                cors.configurationSource(corsConfigurationSource())
+            )
+
+            .csrf(csrf -> csrf.disable())
+
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(
+                        SessionCreationPolicy.STATELESS
+                )
+            )
+
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/index.html", "/login.html", "/dashboard.html", "/view-persons.html",
-                        "/add-person.html", "/edit-person.html", "/face-search.html", "/audit-logs.html",
-                        "/css/**", "/js/**", "/images/**", "/**/*.html").permitAll()
-                .requestMatchers("/api/auth/**", "/api/health").permitAll()
-                .requestMatchers("/api/persons/*/photo").permitAll()
-                .requestMatchers("/api/persons/**").hasAnyRole("ADMIN", "OFFICER", "VIEWER")
-                .requestMatchers("/api/persons/*/delete", "/api/persons/*/edit").hasRole("ADMIN")
-                .requestMatchers("/api/audit/**").hasRole("ADMIN")
+
+                // Public frontend
+                .requestMatchers(
+                        "/",
+                        "/index.html",
+                        "/login.html",
+                        "/dashboard.html",
+                        "/view-persons.html",
+                        "/add-person.html",
+                        "/edit-person.html",
+                        "/face-search.html",
+                        "/audit-logs.html",
+                        "/css/**",
+                        "/js/**",
+                        "/images/**",
+                        "/**/*.html"
+                ).permitAll()
+
+                // Public API
+                .requestMatchers(
+                        "/api/auth/**",
+                        "/api/health"
+                ).permitAll()
+
+                // Public person photos
+                .requestMatchers(
+                        "/api/persons/*/photo"
+                ).permitAll()
+
+                // IMPORTANT:
+                // Specific ADMIN rules must come BEFORE /api/persons/**
+                .requestMatchers(
+                        "/api/persons/*/delete",
+                        "/api/persons/*/edit"
+                ).hasRole("ADMIN")
+
+                // General person access
+                .requestMatchers(
+                        "/api/persons/**"
+                ).hasAnyRole(
+                        "ADMIN",
+                        "OFFICER",
+                        "VIEWER"
+                )
+
+                // Audit logs
+                .requestMatchers(
+                        "/api/audit/**"
+                ).hasRole("ADMIN")
+
+                // Everything else requires authentication
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+            .addFilterBefore(
+                    jwtAuthFilter,
+                    UsernamePasswordAuthenticationFilter.class
+            );
 
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // Allow origins configured via the ALLOWED_ORIGINS environment variable.
-        // If not set, allow all origins to enable access from Render-hosted frontends.
-        String allowed = System.getenv("ALLOWED_ORIGINS");
-        if (allowed == null || allowed.isBlank()) {
-            configuration.setAllowedOriginPatterns(List.of("*"));
+
+        CorsConfiguration configuration =
+                new CorsConfiguration();
+
+        String allowedOrigins =
+                System.getenv("ALLOWED_ORIGINS");
+
+        if (allowedOrigins == null ||
+                allowedOrigins.isBlank()) {
+
+            configuration.setAllowedOriginPatterns(
+                    List.of("*")
+            );
+
         } else {
-            String[] parts = allowed.split(",");
-            configuration.setAllowedOriginPatterns(List.of(parts));
+
+            configuration.setAllowedOriginPatterns(
+                    Arrays.stream(allowedOrigins.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isBlank())
+                            .toList()
+            );
         }
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
+
+        configuration.setAllowedMethods(
+                List.of(
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "DELETE",
+                        "OPTIONS"
+                )
+        );
+
+        configuration.setAllowedHeaders(
+                List.of("*")
+        );
+
         configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration(
+                "/**",
+                configuration
+        );
+
         return source;
     }
 }
