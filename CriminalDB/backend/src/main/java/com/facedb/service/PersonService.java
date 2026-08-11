@@ -102,7 +102,9 @@ public class PersonService {
             String absolutePath = new java.io.File(photoPath).getAbsolutePath();
             String scriptPath = "scripts/extract_embedding.py";
             
-            ProcessBuilder pb = new ProcessBuilder("python", scriptPath, absolutePath);
+            // Use the Python 3 executable installed by the deployment image.
+            // Many Linux distributions no longer provide a `python` alias.
+            ProcessBuilder pb = new ProcessBuilder("python3", scriptPath, absolutePath);
             pb.environment().put("OPENCV_LOG_LEVEL", "ERROR");
             pb.redirectErrorStream(false);
             Process process = pb.start();

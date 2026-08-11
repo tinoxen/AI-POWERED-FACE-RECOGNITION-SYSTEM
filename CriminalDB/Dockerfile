@@ -26,11 +26,22 @@ FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
+# New records are validated and embedded with the bundled OpenCV script.
+# The runtime image must therefore include Python and its image-processing
+# dependencies; the JRE base image does not provide them.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 python3-pip \
+    && python3 -m pip install --no-cache-dir numpy opencv-python-headless \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy built JAR
 COPY --from=build /workspace/backend/target/*.jar ./app.jar
 
 # Copy frontend
 COPY frontend ./frontend
+
+# Keep the face-embedding script at the path used by the application.
+COPY backend/scripts ./scripts
 
 # Tell Spring Boot where the frontend is
 ENV APP_STATIC_DIR=/app/frontend
