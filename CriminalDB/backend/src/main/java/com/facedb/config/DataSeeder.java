@@ -23,6 +23,12 @@ public class DataSeeder implements CommandLineRunner {
     @Value("${APP_ADMIN_PASSWORD:}")
     private String adminPassword;
 
+    @Value("${APP_OFFICER_USERNAME:user}")
+    private String officerUsername;
+
+    @Value("${APP_OFFICER_PASSWORD:5623}")
+    private String officerPassword;
+
     public DataSeeder(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder) {
@@ -36,6 +42,11 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        createAdminIfConfigured();
+        createOfficerIfMissing();
+    }
+
+    private void createAdminIfConfigured() {
 
         if (userRepository.findByUsername(
                 adminUsername
@@ -72,5 +83,21 @@ public class DataSeeder implements CommandLineRunner {
                 "Created initial admin account: " +
                         adminUsername
         );
+    }
+
+    private void createOfficerIfMissing() {
+        if (userRepository.findByUsername(officerUsername).isPresent()) {
+            return;
+        }
+
+        User officer = new User(
+                officerUsername,
+                passwordEncoder.encode(officerPassword),
+                User.Role.OFFICER
+        );
+        officer.setEnabled(true);
+        userRepository.save(officer);
+
+        System.out.println("Created initial officer account: " + officerUsername);
     }
 }
