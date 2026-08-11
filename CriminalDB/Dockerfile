@@ -43,6 +43,10 @@ COPY frontend ./frontend
 # Keep the face-embedding script at the path used by the application.
 COPY backend/scripts ./scripts
 
+# Fetch recognition models while building the image. This prevents a record
+# submission from failing or timing out while it waits for a model download.
+RUN python3 -c 'import os, urllib.request; os.makedirs("/app/scripts/models", exist_ok=True); urllib.request.urlretrieve("https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx", "/app/scripts/models/face_detection_yunet_2023mar.onnx"); urllib.request.urlretrieve("https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx", "/app/scripts/models/face_recognition_sface_2021dec.onnx")'
+
 # Tell Spring Boot where the frontend is
 ENV APP_STATIC_DIR=/app/frontend
 

@@ -67,6 +67,17 @@ async function apiFetch(path, options = {}) {
   return response;
 }
 
+async function getApiError(response, fallback) {
+  const body = await response.text();
+  if (!body) return fallback;
+  try {
+    const parsed = JSON.parse(body);
+    return parsed.message || parsed.error || fallback;
+  } catch (_) {
+    return body;
+  }
+}
+
 function formatDate(isoString) {
   if (!isoString) return "-";
   const d = new Date(isoString);

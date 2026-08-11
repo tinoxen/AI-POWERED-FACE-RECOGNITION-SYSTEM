@@ -148,8 +148,7 @@
       try {
         const res = await apiFetch("/persons", { method: "POST", body: formData });
         if (!res.ok) {
-          const text = await res.text();
-          errorMsg.textContent = text || "Failed to publish record.";
+          errorMsg.textContent = await getApiError(res, "Failed to publish record.");
           submitBtn.textContent = originalText;
           submitBtn.disabled = false;
           return;

@@ -27,6 +27,15 @@ CREATE TABLE IF NOT EXISTS persons (
     other_details TEXT,
     photo_path VARCHAR(500),
     face_embedding TEXT,             -- placeholder biometric data (see PersonService)
+    criminal_id VARCHAR(255),
+    gender VARCHAR(50),
+    phone_number VARCHAR(100),
+    crime_category VARCHAR(255),
+    crime_description TEXT,
+    fir_number VARCHAR(255),
+    arrest_date DATE,
+    police_station VARCHAR(255),
+    current_status VARCHAR(100),
     created_at DATETIME NOT NULL,
     updated_at DATETIME,
     created_by VARCHAR(255)

@@ -469,11 +469,7 @@
           return;
         }
 
-        sessionStorage.setItem("uploadedQueryFace", queryImageDataUrl);
-        sessionStorage.setItem("matchCandidates", JSON.stringify(matchedResults));
-
-        const topMatch = matchedResults[0];
-        window.location.href = `edit-person.html?id=${topMatch.id}&matchScore=${topMatch.matchScore.toFixed(2)}`;
+        displayMatches();
 
       } catch (err) {
         showScanError(err.message || "Cannot establish connection to authentication node.");
@@ -593,7 +589,5 @@
       return div.innerHTML;
     }
   </script>
-</body>
-
 </body>
 </html>

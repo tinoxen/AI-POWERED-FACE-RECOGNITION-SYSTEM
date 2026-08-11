@@ -11,7 +11,9 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.http.HttpMethod;
 
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -29,6 +31,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
@@ -114,33 +117,18 @@ public class SecurityConfig {
                 ).permitAll()
 
                 // ==============================
-                // PUBLIC PERSON PHOTOS
-                // ==============================
-
-                .requestMatchers(
-                    "/api/persons/*/photo"
-                ).permitAll()
-
-                // ==============================
-                // ADMIN PERSON OPERATIONS
-                // ==============================
-
-                .requestMatchers(
-                    "/api/persons/*/delete",
-                    "/api/persons/*/edit"
-                ).hasRole("ADMIN")
-
-                // ==============================
                 // PERSON API
                 // ==============================
 
+                .requestMatchers(HttpMethod.GET, "/api/persons/**")
+                .hasAnyRole("ADMIN", "OFFICER", "VIEWER")
+
+                .requestMatchers(HttpMethod.POST, "/api/persons", "/api/persons/match")
+                .hasAnyRole("ADMIN", "OFFICER")
+
                 .requestMatchers(
                     "/api/persons/**"
-                ).hasAnyRole(
-                    "ADMIN",
-                    "OFFICER",
-                    "VIEWER"
-                )
+                ).hasRole("ADMIN")
 
                 // ==============================
                 // AUDIT LOGS
@@ -178,7 +166,7 @@ public class SecurityConfig {
                 allowedOrigins.isBlank()) {
 
             configuration.setAllowedOriginPatterns(
-                List.of("*")
+                List.of("http://localhost:5500", "http://127.0.0.1:5500")
             );
 
         } else {

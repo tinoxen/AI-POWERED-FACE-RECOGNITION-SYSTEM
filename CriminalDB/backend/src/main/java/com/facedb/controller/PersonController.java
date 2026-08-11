@@ -13,6 +13,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -20,6 +22,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/persons")
 public class PersonController {
+
+    private static final Logger log = LoggerFactory.getLogger(PersonController.class);
 
     private final PersonService personService;
     private final FileStorageService fileStorageService;
@@ -123,7 +127,16 @@ public class PersonController {
         if (photo != null && !photo.isEmpty()) {
             String path = fileStorageService.store(photo);
             p.setPhotoPath(path);
-            p.setFaceEmbedding(personService.extractFaceEmbedding(path));
+            try {
+                p.setFaceEmbedding(personService.extractFaceEmbedding(path));
+            } catch (RuntimeException e) {
+                // A record can still be registered even when the uploaded
+                // image cannot produce a usable biometric template. It will
+                // be excluded from face-match results until its photo is
+                // replaced with a suitable image.
+                log.warn("Created record without a face embedding for {}: {}",
+                        fullName, e.getMessage());
+            }
         }
 
         Person saved = personService.save(p);
@@ -161,18 +174,25 @@ public class PersonController {
                                       Authentication auth, HttpServletRequest req) throws Exception {
         Person p = personService.findById(id);
         validateImageUpload(photo);
-        
-        if (p.getPhotoPath() != null) {
-            try {
-                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(p.getPhotoPath()));
-            } catch (Exception ignored) {}
-        }
-        
+
+        String previousPhotoPath = p.getPhotoPath();
         String path = fileStorageService.store(photo);
         p.setPhotoPath(path);
-        p.setFaceEmbedding(personService.extractFaceEmbedding(path));
-        
+        try {
+            p.setFaceEmbedding(personService.extractFaceEmbedding(path));
+        } catch (RuntimeException e) {
+            p.setFaceEmbedding(null);
+            log.warn("Updated photo without a face embedding for person {}: {}", id, e.getMessage());
+        }
+
         Person saved = personService.save(p);
+        if (previousPhotoPath != null && !previousPhotoPath.equals(path)) {
+            try {
+                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(previousPhotoPath));
+            } catch (Exception e) {
+                log.warn("Could not remove replaced photo for person {}", id, e);
+            }
+        }
         auditService.log(auth.getName(), "UPDATE_PERSON_PHOTO", id, null, req.getRemoteAddr());
         return PersonResponse.from(saved);
     }
@@ -188,7 +208,7 @@ public class PersonController {
             }
         }
         
-        java.io.File uploadsDir = new java.io.File("uploads");
+        java.io.File uploadsDir = fileStorageService.getUploadDirectory().toFile();
         java.io.File[] files = uploadsDir.listFiles();
         int deletedCount = 0;
         if (files != null) {

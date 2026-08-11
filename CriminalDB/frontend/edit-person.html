@@ -187,9 +187,14 @@
     Auth.requireLogin();
     initTopbar("view-persons.html");
 
-    if (!Auth.isAdmin()) {
-      alert("UNAUTHORIZED ACCESS: Admin credentials required.");
-      window.location.href = "view-persons.html";
+    const canEdit = Auth.isAdmin();
+    if (!canEdit) {
+      document.querySelector("h1").textContent = "Classified Profile";
+      document.querySelector(".subtitle").textContent = "Read-only record view. Administrator credentials are required to modify a case file.";
+      document.querySelectorAll("#edit-form input, #edit-form select, #edit-form textarea").forEach(field => {
+        field.disabled = true;
+      });
+      document.querySelector("button[type=submit]").style.display = "none";
     }
 
     const params = new URLSearchParams(window.location.search);
@@ -197,6 +202,10 @@
 
     async function loadPerson() {
       const res = await apiFetch(`/persons/${personId}`);
+      if (!res.ok) {
+        document.getElementById("error-msg").textContent = await getApiError(res, "Unable to load this record.");
+        return;
+      }
       const p = await res.json();
 
       document.getElementById("fullName").value = p.fullName || "";
@@ -298,6 +307,7 @@
 
     document.getElementById("edit-form").addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (!canEdit) return;
       const errorMsg = document.getElementById("error-msg");
       const successMsg = document.getElementById("success-msg");
       errorMsg.textContent = "";
@@ -337,8 +347,7 @@
             body: formData
           });
           if (!photoRes.ok) {
-            const errText = await photoRes.text();
-            errorMsg.textContent = "Biometric upload failed: " + (errText || "Error uploading file.");
+            errorMsg.textContent = "Biometric upload failed: " + await getApiError(photoRes, "Error uploading file.");
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
             return;
@@ -359,7 +368,7 @@
       });
 
       if (!res.ok) {
-        errorMsg.textContent = "Failed to write changes to node registry.";
+        errorMsg.textContent = await getApiError(res, "Failed to write changes to node registry.");
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
         return;
