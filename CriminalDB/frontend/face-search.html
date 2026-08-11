@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>CriminalDB · Biometric Face Search</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Local styling enhancements for the face search layout */
+    .radar-log {
+      font-family: 'Rajdhani', monospace;
+      font-size: 13px;
+      color: var(--accent);
+      background: rgba(15, 25, 45, 0.7);
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 8px;
+      height: 120px;
+      overflow-y: auto;
+      margin-top: 16px;
+      text-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
+    }
+
+    .log-line {
+      margin-bottom: 4px;
+    }
+
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+
+    .info-table td {
+      padding: 10px 12px;
+      background: rgba(15, 25, 45, 0.3);
+      border: 1px solid var(--border);
+    }
+
+    .info-table td.label-cell {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--muted);
+      width: 25%;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+    }
+
+    .possible-matches-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .match-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: var(--transition);
+    }
+
+    .match-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);
+    }
+
+    .match-card img {
+      width: 60px;
+      height: 60px;
+      border-radius: 6px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+    }
+
+    .warning-panel {
+      border-color: rgba(255, 77, 109, 0.4);
+      box-shadow: 0 0 25px rgba(255, 77, 109, 0.08);
+    }
+
+    .warning-panel::before {
+      background: linear-gradient(90deg, transparent, var(--danger), transparent) !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container" style="max-width: 900px;">
+    <h1>Biometric Face Search</h1>
+    <p class="subtitle">Search database records using ArcFace matching algorithms.</p>
+
+    <!-- State 1: Upload Image -->
+    <div id="upload-state" class="glass-card"
+      style="text-align: center; padding: 48px 24px; border: 2px dashed rgba(0, 229, 255, 0.2); transition: var(--transition); cursor: pointer;">
+      <div style="font-size: 48px; margin-bottom: 16px; animation: pulse 2s infinite alternate;">🔍</div>
+      <h2>Select Face Query Image</h2>
+      <p style="color:var(--muted); font-size:14px; margin-bottom: 24px;">Drag & Drop a mugshot file here, or click to
+        browse (JPG, JPEG, PNG, WEBP, max 5MB).</p>
+
+      <div style="max-width: 400px; margin: 0 auto;">
+        <label for="face-file-input" class="btn" style="display: inline-block; cursor: pointer;">Browse Files</label>
+        <input type="file" id="face-file-input" accept="image/jpeg,image/png,image/webp" style="display: none;">
+      </div>
+    </div>
+
+    <!-- State 2: Scanning Image -->
+    <div id="scanning-state" class="glass-card" style="display: none; text-align: center; padding: 40px 24px;">
+      <div class="scanner-container" style="margin-bottom: 24px;">
+        <div class="scanner-line"></div>
+        <div class="scanner-radar"></div>
+      </div>
+      <h2 style="font-family:'Orbitron',sans-serif; letter-spacing:0.05em; color:var(--accent); margin-bottom: 24px;">
+        BIOMETRIC RECOGNITION SCANNING</h2>
+
+      <!-- Checkpoint list -->
+      <div
+        style="max-width: 340px; margin: 0 auto 24px; text-align: left; font-family:'Rajdhani',sans-serif; font-size:15px; color:var(--muted); line-height: 2.2;">
+        <div id="step-1" style="display: flex; align-items: center; gap: 10px; transition: var(--transition);">
+          <span class="bullet"
+            style="width: 8px; height: 8px; border-radius: 50%; background: var(--border); display: inline-block;"></span>
+          Uploading image...
+        </div>
+        <div id="step-2" style="display: flex; align-items: center; gap: 10px; transition: var(--transition);">
+          <span class="bullet"
+            style="width: 8px; height: 8px; border-radius: 50%; background: var(--border); display: inline-block;"></span>
+          Detecting face...
+        </div>
+        <div id="step-3" style="display: flex; align-items: center; gap: 10px; transition: var(--transition);">
+          <span class="bullet"
+            style="width: 8px; height: 8px; border-radius: 50%; background: var(--border); display: inline-block;"></span>
+          Extracting facial features...
+        </div>
+        <div id="step-4" style="display: flex; align-items: center; gap: 10px; transition: var(--transition);">
+          <span class="bullet"
+            style="width: 8px; height: 8px; border-radius: 50%; background: var(--border); display: inline-block;"></span>
+          Comparing with database...
+        </div>
+        <div id="step-5" style="display: flex; align-items: center; gap: 10px; transition: var(--transition);">
+          <span class="bullet"
+            style="width: 8px; height: 8px; border-radius: 50%; background: var(--border); display: inline-block;"></span>
+          Finding best match...
+        </div>
+      </div>
+
+      <div class="radar-log" id="radar-log-console" style="text-align: left;"></div>
+    </div>
+
+    <!-- State 3: No Match Found -->
+    <div id="no-match-state" class="glass-card warning-panel"
+      style="display: none; text-align: center; padding: 48px 24px;">
+      <div style="font-size: 48px; color: var(--danger); margin-bottom: 16px;">⚠️</div>
+      <h2 style="color: var(--danger);">No Matching Faces Found</h2>
+      <p style="color: var(--muted); font-size: 14px; max-width: 500px; margin: 0 auto 32px;">
+        The query face print does not exceed the required verification threshold (75.00%) in the system registry.
+      </p>
+      <button class="secondary" style="border-color: var(--danger); color: var(--danger);"
+        onclick="resetSearch()">Search Again</button>
+    </div>
+
+    <!-- State 4: Match Found Details -->
+    <div id="match-state" style="display: none;">
+      <!-- Biometric Comparison Header -->
+      <div class="glass-card">
+        <div
+          style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+          <div>
+            <h2 style="margin: 0; color: var(--success); text-shadow: 0 0 10px rgba(0, 255, 157, 0.3);">✔ Match Found
+            </h2>
+            <div
+              style="font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 600; text-transform: uppercase;">
+              Node calculations validated</div>
+          </div>
+          <div style="text-align: right;">
+            <div
+              style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em;">
+              Matching Score</div>
+            <div
+              style="font-family:'Orbitron',sans-serif; font-size: 28px; font-weight: 900; color: var(--accent); text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);"
+              id="top-match-score">-</div>
+          </div>
+        </div>
+
+        <div class="comparison-panel">
+          <div>
+            <img id="query-face-preview" class="comparison-face" src="" alt="Query Face">
+            <div
+              style="font-size:11px; text-align:center; color:var(--muted); margin-top:6px; font-weight:600; text-transform:uppercase;">
+              Uploaded Image</div>
+          </div>
+          <div class="comparison-arrow">
+            <svg width="40" height="24" viewBox="0 0 40 24" fill="none">
+              <path d="M0 12H36M36 12L28 4M36 12L28 20" stroke="var(--accent)" stroke-width="3"
+                stroke-linecap="round" />
+            </svg>
+            <span style="font-size: 10px; margin-top: 4px; letter-spacing: 0.1em;"
+              id="confidence-rating-label">CONFIDENCE: VERY HIGH</span>
+          </div>
+          <div>
+            <img id="matched-face-preview" class="comparison-face" src="" alt="Matched Face">
+            <div
+              style="font-size:11px; text-align:center; color:var(--muted); margin-top:6px; font-weight:600; text-transform:uppercase;">
+              Stored Face</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Classified Profile Sheet -->
+      <div class="glass-card">
+        <h2>Classified Intelligence Profile</h2>
+        <table class="info-table">
+          <tr>
+            <td class="label-cell">Full Name</td>
+            <td id="info-fullName" style="font-weight:700;">-</td>
+            <td class="label-cell">Criminal ID</td>
+            <td id="info-criminalId" style="font-family:'Orbitron',sans-serif; font-weight:700; color:var(--accent);">-
+            </td>
+          </tr>
+          <tr>
+            <td class="label-cell">Gender</td>
+            <td id="info-gender">-</td>
+            <td class="label-cell">Age</td>
+            <td id="info-age">-</td>
+          </tr>
+          <tr>
+            <td class="label-cell">Date of Birth</td>
+            <td id="info-dob">-</td>
+            <td class="label-cell">Address</td>
+            <td id="info-address">-</td>
+          </tr>
+          <tr>
+            <td class="label-cell">Phone Number</td>
+            <td id="info-phone">-</td>
+            <td class="label-cell">FIR Number</td>
+            <td id="info-fir">-</td>
+          </tr>
+          <tr>
+            <td class="label-cell">Crime Category</td>
+            <td id="info-category" style="color:var(--warning); font-weight:700;">-</td>
+            <td class="label-cell">Arrest Date</td>
+            <td id="info-arrestDate">-</td>
+          </tr>
+          <tr>
+            <td class="label-cell">Police Station</td>
+            <td id="info-station">-</td>
+            <td class="label-cell">Current Status</td>
+            <td><span class="pill" id="info-status">-</span></td>
+          </tr>
+          <tr>
+            <td class="label-cell">Report Notes</td>
+            <td id="info-description" colspan="3" style="line-height: 1.6;">-</td>
+          </tr>
+        </table>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px;">
+          <button class="secondary" onclick="resetSearch()">New Scan</button>
+          <button id="view-full-record-btn">Open File Editor</button>
+        </div>
+      </div>
+
+      <!-- Secondary Matches -->
+      <div id="secondary-matches-section" style="display: none;">
+        <h2>Other Possible Candidates</h2>
+        <div class="possible-matches-grid" id="secondary-matches-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api-config.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    initTopbar("face-search.html");
+
+    let matchedResults = [];
+    let queryImageDataUrl = "";
+
+    // Reset search state
+    function resetSearch() {
+      document.getElementById("upload-state").style.display = "block";
+      document.getElementById("scanning-state").style.display = "none";
+      document.getElementById("no-match-state").style.display = "none";
+      document.getElementById("match-state").style.display = "none";
+      document.getElementById("face-file-input").value = "";
+      matchedResults = [];
+      queryImageDataUrl = "";
+    }
+
+    // Drag and Drop Zone Event Bindings
+    const dropZone = document.getElementById("upload-state");
+
+    // Click to select file trigger
+    dropZone.addEventListener("click", () => {
+      document.getElementById("face-file-input").click();
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.borderColor = "var(--accent)";
+        dropZone.style.boxShadow = "0 0 15px rgba(0, 229, 255, 0.25)";
+        dropZone.style.background = "rgba(15, 25, 45, 0.9)";
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.borderColor = "rgba(0, 229, 255, 0.2)";
+        dropZone.style.boxShadow = "none";
+        dropZone.style.background = "var(--panel-2)";
+      }, false);
+    });
+
+    dropZone.addEventListener('drop', e => {
+      const dt = e.dataTransfer;
+      const file = dt.files[0];
+      if (file) {
+        processSelectedFile(file);
+      }
+    });
+
+    document.getElementById("face-file-input").addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        processSelectedFile(file);
+      }
+    });
+
+    function processSelectedFile(file) {
+      const reader = new FileReader();
+      reader.onload = function (evt) {
+        queryImageDataUrl = evt.target.result;
+        runFaceSearch(file);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Run simulated face search workflow
+    function runFaceSearch(file) {
+      document.getElementById("upload-state").style.display = "none";
+      document.getElementById("scanning-state").style.display = "block";
+
+      const logConsole = document.getElementById("radar-log-console");
+      logConsole.innerHTML = "";
+
+      // Reset progress steps
+      const steps = [
+        { id: "step-1", text: "Uploading image..." },
+        { id: "step-2", text: "Detecting face..." },
+        { id: "step-3", text: "Extracting facial features..." },
+        { id: "step-4", text: "Comparing with database..." },
+        { id: "step-5", text: "Finding best match..." }
+      ];
+
+      steps.forEach(s => {
+        const el = document.getElementById(s.id);
+        el.style.color = "var(--muted)";
+        el.querySelector(".bullet").style.background = "var(--border)";
+        el.innerHTML = `<span class="bullet" style="width: 8px; height: 8px; border-radius: 50%; background: var(--border); display: inline-block;"></span> ` + s.text;
+      });
+
+      const logs = [
+        "[SYS] INITIALIZING NEURAL ENGINE CONFIGS...",
+        "[SYS] LOADING ONNX WEIGHTS FOR YUNET DETECTOR & SFACE EMBEDDER...",
+        "[SYS] PREPROCESSING IMAGE STREAMS TO INPUT TENSORS...",
+        "[SYS] DETECTING FACE BOUNDARIES AND LOCALIZING 5-POINT LANDMARKS...",
+        "[SYS] ALIGNING FACE GEOMETRIES TO CANONICAL CROP...",
+        "[SYS] EXTRACTION VECTOR COMPLETED: 512-DIMENSIONAL FEATURE EMBEDDING...",
+        "[SYS] QUERYING SYSTEM CLASS REGISTRY FOR NEAREST EMBEDDING MATCHES...",
+        "[SYS] RUNNING COSINE DISTANCE DISTRIBUTIONS..."
+      ];
+
+      // Step 1: Uploading image
+      activateStep(1);
+      setTimeout(() => {
+        completeStep(1, "Uploading image...");
+        activateStep(2);
+      }, 400);
+
+      // Step 2: Detecting face
+      setTimeout(() => {
+        completeStep(2, "Detecting face...");
+        activateStep(3);
+      }, 800);
+
+      // Step 3: Extracting features
+      setTimeout(() => {
+        completeStep(3, "Extracting facial features...");
+        activateStep(4);
+      }, 1200);
+
+      // Step 4: Comparing with DB
+      setTimeout(() => {
+        completeStep(4, "Comparing with database...");
+        activateStep(5);
+      }, 1600);
+
+      // Step 5: Finding matches & Call API
+      setTimeout(() => {
+        completeStep(5, "Finding best match...");
+        postMatchRequest(file);
+      }, 2000);
+
+      // Print log lines in parallel
+      let logIdx = 0;
+      const addLog = () => {
+        if (logIdx < logs.length) {
+          const div = document.createElement("div");
+          div.className = "log-line";
+          div.textContent = logs[logIdx++];
+          logConsole.appendChild(div);
+          logConsole.scrollTop = logConsole.scrollHeight;
+          setTimeout(addLog, 220);
+        }
+      };
+      addLog();
+    }
+
+    function activateStep(num) {
+      const el = document.getElementById("step-" + num);
+      if (el) {
+        el.style.color = "var(--accent)";
+        el.querySelector(".bullet").style.background = "var(--accent)";
+      }
+    }
+
+    function completeStep(num, text) {
+      const el = document.getElementById("step-" + num);
+      if (el) {
+        el.style.color = "var(--success)";
+        el.innerHTML = `<span class="bullet" style="width: 8px; height: 8px; border-radius: 50%; background: var(--success); display: inline-block;"></span> ✔ ` + text;
+      }
+    }
+
+    // Call REST endpoint
+    async function postMatchRequest(file) {
+      const formData = new FormData();
+      formData.append("photo", file);
+
+      try {
+        const res = await apiFetch("/persons/match", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          let parsedErr = "Biometric search failed.";
+          try {
+            const jsonErr = JSON.parse(errText);
+            parsedErr = jsonErr.message || parsedErr;
+          } catch (e) {
+            parsedErr = errText || parsedErr;
+          }
+          showScanError(parsedErr);
+          return;
+        }
+
+        matchedResults = await res.json();
+        if (matchedResults.length === 0) {
+          showNoMatch();
+          return;
+        }
+
+        displayMatches();
+
+      } catch (err) {
+        showScanError(err.message || "Cannot establish connection to authentication node.");
+      }
+    }
+
+    function showNoMatch() {
+      document.getElementById("scanning-state").style.display = "none";
+      document.getElementById("no-match-state").style.display = "block";
+      document.getElementById("no-match-title").textContent = "No Matching Face Found";
+      document.getElementById("no-match-description").textContent = "The uploaded face does not match any existing criminal record.";
+    }
+
+    function showScanError(errMsg) {
+      document.getElementById("scanning-state").style.display = "none";
+      document.getElementById("no-match-state").style.display = "block";
+      document.getElementById("no-match-title").textContent = "Scan Validation Failure";
+      document.getElementById("no-match-description").textContent = errMsg;
+    }
+
+    function displayMatches() {
+      document.getElementById("scanning-state").style.display = "none";
+      document.getElementById("match-state").style.display = "block";
+
+      // 1. Set Query Face Data URL
+      document.getElementById("query-face-preview").src = queryImageDataUrl;
+
+      // 2. Select top match
+      selectPrimaryMatch(matchedResults[0]);
+
+      // 3. Render secondary matches if any
+      const secondarySection = document.getElementById("secondary-matches-section");
+      const secondaryContainer = document.getElementById("secondary-matches-container");
+      secondaryContainer.innerHTML = "";
+
+      if (matchedResults.length > 1) {
+        secondarySection.style.display = "block";
+        matchedResults.slice(1).forEach((p, idx) => {
+          const card = document.createElement("div");
+          card.className = "match-card";
+          card.innerHTML = `
+            <img src="${p.photoUrl ? API_BASE + p.photoUrl.replace('/api', '') : ''}" alt="Match Thumbnail">
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:14px; color:var(--text);">${escapeHtml(p.fullName)}</div>
+              <div style="font-size:12px; color:var(--muted); font-family:'Orbitron',sans-serif; margin-top:2px;">${p.criminalId || `CR-${p.id}`}</div>
+              <div style="font-size:12px; color:var(--accent); font-weight:700; margin-top:4px;">Score: ${p.matchScore.toFixed(2)}%</div>
+            </div>
+            <button class="secondary" style="padding:6px 12px; font-size:11px; border-radius:6px;" onclick="swapPrimary(${idx + 1})">View File</button>
+          `;
+          secondaryContainer.appendChild(card);
+        });
+      } else {
+        secondarySection.style.display = "none";
+      }
+    }
+
+    // Swaps another possible candidate to the top matching spot
+    window.swapPrimary = function (index) {
+      // Move selected match to index 0
+      const selected = matchedResults.splice(index, 1)[0];
+      matchedResults.unshift(selected);
+      displayMatches();
+    };
+
+    function selectPrimaryMatch(p) {
+      // Match score and database preview
+      document.getElementById("top-match-score").textContent = `${p.matchScore.toFixed(2)}%`;
+      document.getElementById("matched-face-preview").src = p.photoUrl ? `${API_BASE}${p.photoUrl.replace('/api', '')}` : '';
+
+      // Determine Confidence Level
+      const confidenceLabel = document.getElementById("confidence-rating-label");
+      let confidence = "LOW";
+      let confidenceColor = "var(--danger)";
+
+      if (p.matchScore >= 95.0) {
+        confidence = "VERY HIGH";
+        confidenceColor = "var(--success)";
+      } else if (p.matchScore >= 85.0) {
+        confidence = "HIGH";
+        confidenceColor = "var(--success)";
+      } else if (p.matchScore >= 75.0) {
+        confidence = "MEDIUM";
+        confidenceColor = "var(--warning)";
+      }
+
+      confidenceLabel.textContent = `CONFIDENCE: ${confidence}`;
+      confidenceLabel.style.color = confidenceColor;
+
+      // Populate Profile Details
+      document.getElementById("info-fullName").textContent = p.fullName || "-";
+      document.getElementById("info-criminalId").textContent = p.criminalId || `CR-${p.id}`;
+      document.getElementById("info-gender").textContent = p.gender || "-";
+      document.getElementById("info-age").textContent = p.age || "-";
+      document.getElementById("info-dob").textContent = p.dateOfBirth || "-";
+      document.getElementById("info-address").textContent = p.address || "-";
+      document.getElementById("info-phone").textContent = p.phoneNumber || "-";
+      document.getElementById("info-fir").textContent = p.firNumber || "-";
+      document.getElementById("info-category").textContent = p.crimeCategory || "-";
+      document.getElementById("info-arrestDate").textContent = p.arrestDate || "-";
+      document.getElementById("info-station").textContent = p.policeStation || "-";
+      document.getElementById("info-description").textContent = p.crimeDescription || "-";
+
+      // Status pill styling
+      const statusPill = document.getElementById("info-status");
+      statusPill.textContent = p.currentStatus || "Registered";
+      statusPill.className = `pill ${p.currentStatus ? p.currentStatus.toLowerCase() : 'viewer'}`;
+
+      // Open full record button binding
+      document.getElementById("view-full-record-btn").onclick = function () {
+        window.location.href = `edit-person.html?id=${p.id}`;
+      };
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

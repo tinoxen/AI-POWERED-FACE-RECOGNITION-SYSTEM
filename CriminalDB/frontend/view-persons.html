@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>CriminalDB · Criminal Records</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>Criminal Registry Files</h1>
+    <p class="subtitle">Search database records by name, database ID, Criminal ID, or FIR number.</p>
+
+    <div class="search-row" style="margin-bottom: 24px;">
+      <input type="text" id="search-input" placeholder="Search by name, database ID, Criminal ID, or FIR...">
+      <button id="search-btn">Search</button>
+    </div>
+
+    <div class="glass-card">
+      <table id="persons-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Criminal ID</th>
+            <th>Full Name</th>
+            <th>Gender</th>
+            <th>Date of Birth</th>
+            <th>Status</th>
+            <th>Arrest/Add Date</th>
+            <th id="actions-header" style="display:none;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="persons-tbody"></tbody>
+      </table>
+      <div class="empty-state" id="empty-state" style="display:none;">No records match query parameters.</div>
+    </div>
+  </div>
+
+  <script src="js/api-config.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    initTopbar("view-persons.html");
+
+    const isAdmin = Auth.isAdmin();
+    if (isAdmin) document.getElementById("actions-header").style.display = "";
+
+    async function loadPersons(query) {
+      const tbody = document.getElementById("persons-tbody");
+      const emptyState = document.getElementById("empty-state");
+      tbody.innerHTML = "";
+
+      const q = query ? `?q=${encodeURIComponent(query)}` : "";
+      const res = await apiFetch("/persons" + q);
+      const persons = await res.json();
+
+      if (persons.length === 0) {
+        emptyState.style.display = "block";
+        return;
+      }
+      emptyState.style.display = "none";
+
+      persons.forEach(p => {
+        const tr = document.createElement("tr");
+        const statusClass = p.currentStatus ? p.currentStatus.toLowerCase() : "viewer";
+        tr.innerHTML = `
+          <td>${p.photoUrl ? `<img class="avatar" src="${API_BASE}${p.photoUrl.replace('/api', '')}">` : `<div class="avatar"></div>`}</td>
+          <td style="font-family:'Orbitron',sans-serif; font-weight:700; color:var(--accent);">${p.criminalId || `CR-${p.id}`}</td>
+          <td style="font-weight:600;">${escapeHtml(p.fullName)}</td>
+          <td>${p.gender || "-"}</td>
+          <td>${p.dateOfBirth || "-"}</td>
+          <td><span class="pill ${statusClass}">${p.currentStatus || "Registered"}</span></td>
+          <td>${formatDate(p.createdAt)}</td>
+          ${isAdmin ? `<td class="row-actions">
+            <button class="secondary" onclick="editPerson(${p.id})">Edit</button>
+            <button class="danger" onclick="deletePerson(${p.id})">Delete</button>
+          </td>` : ""}
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function editPerson(id) {
+      window.location.href = `edit-person.html?id=${id}`;
+    }
+
+    async function deletePerson(id) {
+      if (!confirm("CRITICAL WARNING: Permanently delete this classified record? This action is recorded in audit logs.")) return;
+      const res = await apiFetch(`/persons/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        loadPersons(document.getElementById("search-input").value.trim());
+      } else {
+        alert("Operation failed: Insufficient authorization or connection error.");
+      }
+    }
+
+    document.getElementById("search-btn").addEventListener("click", () => {
+      loadPersons(document.getElementById("search-input").value.trim());
+    });
+    document.getElementById("search-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") loadPersons(e.target.value.trim());
+    });
+
+    const initialQuery = new URLSearchParams(window.location.search).get("q") || "";
+    document.getElementById("search-input").value = initialQuery;
+    loadPersons(initialQuery);
+  </script>
+</body>
+
+</html>

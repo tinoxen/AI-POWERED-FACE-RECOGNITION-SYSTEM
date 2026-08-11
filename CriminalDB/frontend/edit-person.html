@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>CriminalDB · Edit Classified Profile</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .match-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: var(--transition);
+    }
+
+    .match-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);
+    }
+
+    .match-card img {
+      width: 60px;
+      height: 60px;
+      border-radius: 6px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container" style="max-width: 1100px;">
+    <h1>Edit Classified Profile</h1>
+    <p class="subtitle">Admin only. Modifying columns leaves permanent footprints in audit logs.</p>
+
+    <!-- Biometric Comparison Card (Conditional) -->
+    <div class="glass-card" id="match-comparison-card" style="display: none; margin-bottom: 24px;">
+      <div
+        style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+        <div>
+          <h2 style="margin: 0; color: var(--success); text-shadow: 0 0 10px rgba(0, 255, 157, 0.3);">✔ Biometric Match
+            Verified</h2>
+          <div
+            style="font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 600; text-transform: uppercase;">
+            Facial scan alignment comparison</div>
+        </div>
+        <div style="text-align: right;">
+          <div
+            style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em;">
+            Matching Score</div>
+          <div
+            style="font-family:'Orbitron',sans-serif; font-size: 28px; font-weight: 900; color: var(--accent); text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);"
+            id="top-match-score">-</div>
+        </div>
+      </div>
+
+      <div class="comparison-panel">
+        <div>
+          <img id="query-face-preview" class="comparison-face" src="" alt="Query Face"
+            style="width:110px; height:110px; border-radius:8px; object-fit:cover; border:2px solid var(--border);">
+          <div
+            style="font-size:11px; text-align:center; color:var(--muted); margin-top:6px; font-weight:600; text-transform:uppercase;">
+            Uploaded Image</div>
+        </div>
+        <div class="comparison-arrow"
+          style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+          <svg width="40" height="24" viewBox="0 0 40 24" fill="none">
+            <path d="M0 12H36M36 12L28 4M36 12L28 20" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" />
+          </svg>
+          <span style="font-size: 10px; margin-top: 4px; letter-spacing: 0.1em; font-weight: 700;"
+            id="confidence-rating-label">CONFIDENCE: VERY HIGH</span>
+        </div>
+        <div>
+          <img id="matched-face-preview" class="comparison-face" src="" alt="Matched Face"
+            style="width:110px; height:110px; border-radius:8px; object-fit:cover; border:2px solid var(--border);">
+          <div
+            style="font-size:11px; text-align:center; color:var(--muted); margin-top:6px; font-weight:600; text-transform:uppercase;">
+            Stored Face</div>
+        </div>
+      </div>
+    </div>
+
+    <form id="edit-form">
+      <div class="split-layout">
+        <!-- Left Column: Personal details -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h2>Personal Profile</h2>
+
+          <!-- Registered mugshot preview -->
+          <div id="profile-pic-container"
+            style="display: none; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border);">
+            <img id="profile-pic" src="" alt="Profile Pic"
+              style="width: 100px; height: 100px; border-radius: 8px; object-fit: cover; border: 2px solid var(--accent); box-shadow: 0 0 10px rgba(0, 229, 255, 0.25);">
+            <div>
+              <div style="font-size: 14px; font-weight: 700; color: var(--text);">Face Photo</div>
+              <div
+                style="font-size: 12px; color: var(--accent); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+                CLASSIFIED BIOMETRIC</div>
+            </div>
+          </div>
+
+          <label for="photo">Change Mugshot Photo</label>
+          <input type="file" id="photo" accept="image/jpeg,image/png,image/webp">
+
+          <label for="fullName">Full Name</label>
+          <input type="text" id="fullName" required>
+
+          <label for="dob">Date of Birth</label>
+          <input type="date" id="dob" required>
+
+          <label for="gender">Gender</label>
+          <select id="gender" required>
+            <option value="" disabled selected>Select Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <label for="address">Last Known Address</label>
+          <input type="text" id="address">
+
+          <label for="phoneNumber">Contact Phone Number</label>
+          <input type="text" id="phoneNumber">
+
+          <label for="otherDetails">Physical Marks & Identification Notes</label>
+          <textarea id="otherDetails"></textarea>
+        </div>
+
+        <!-- Right Column: Case Details -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h2>Classified Crime Records</h2>
+
+          <label for="criminalId">Criminal Reference ID</label>
+          <input type="text" id="criminalId" required>
+
+          <label for="crimeCategory">Crime Category</label>
+          <input type="text" id="crimeCategory" required>
+
+          <label for="firNumber">FIR Reference Number</label>
+          <input type="text" id="firNumber" required>
+
+          <label for="policeStation">Responsible Police Station</label>
+          <input type="text" id="policeStation" required>
+
+          <label for="currentStatus">Current Case Status</label>
+          <select id="currentStatus" required>
+            <option value="" disabled selected>Select Status</option>
+            <option value="Active">Active / At Large</option>
+            <option value="Wanted">Wanted</option>
+            <option value="Arrested">Arrested / In Custody</option>
+            <option value="Bailed">Bailed / Parole</option>
+            <option value="Closed">Case Closed</option>
+          </select>
+
+          <label for="arrestDate">Arrest / Filing Date</label>
+          <input type="date" id="arrestDate" required>
+
+          <label for="crimeDescription">Official Crime Case Narrative</label>
+          <textarea id="crimeDescription"></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions" style="justify-content: flex-end; margin-top: 24px;">
+        <button type="submit">Publish Changes</button>
+        <button type="button" class="secondary" onclick="window.location.href='view-persons.html'">Abort File</button>
+      </div>
+      <div class="error-msg" id="error-msg" style="text-align: right;"></div>
+      <div class="success-msg" id="success-msg" style="text-align: right;"></div>
+    </form>
+
+    <!-- Secondary Matches (Conditional) -->
+    <div id="secondary-matches-section" style="display: none; margin-top: 32px; margin-bottom: 24px;">
+      <h2>Other Possible Candidates</h2>
+      <div class="possible-matches-grid" id="secondary-matches-container"
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px;">
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api-config.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    initTopbar("view-persons.html");
+
+    const canEdit = Auth.isAdmin();
+    if (!canEdit) {
+      document.querySelector("h1").textContent = "Classified Profile";
+      document.querySelector(".subtitle").textContent = "Read-only record view. Administrator credentials are required to modify a case file.";
+      document.querySelectorAll("#edit-form input, #edit-form select, #edit-form textarea").forEach(field => {
+        field.disabled = true;
+      });
+      document.querySelector("button[type=submit]").style.display = "none";
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const personId = params.get("id");
+
+    async function loadPerson() {
+      const res = await apiFetch(`/persons/${personId}`);
+      if (!res.ok) {
+        document.getElementById("error-msg").textContent = await getApiError(res, "Unable to load this record.");
+        return;
+      }
+      const p = await res.json();
+
+      document.getElementById("fullName").value = p.fullName || "";
+      document.getElementById("dob").value = p.dateOfBirth || "";
+      document.getElementById("gender").value = p.gender || "";
+      document.getElementById("address").value = p.address || "";
+      document.getElementById("phoneNumber").value = p.phoneNumber || "";
+      document.getElementById("otherDetails").value = p.otherDetails || "";
+
+      document.getElementById("criminalId").value = p.criminalId || "";
+      document.getElementById("crimeCategory").value = p.crimeCategory || "";
+      document.getElementById("firNumber").value = p.firNumber || "";
+      document.getElementById("policeStation").value = p.policeStation || "";
+      document.getElementById("currentStatus").value = p.currentStatus || "";
+      document.getElementById("arrestDate").value = p.arrestDate || "";
+      document.getElementById("crimeDescription").value = p.crimeDescription || "";
+
+      if (p.photoUrl) {
+        document.getElementById("profile-pic").src = `${API_BASE}${p.photoUrl.replace('/api', '')}`;
+        document.getElementById("profile-pic-container").style.display = "flex";
+      }
+
+      // If matched score is passed from face search redirection
+      const matchScore = params.get("matchScore");
+      if (matchScore) {
+        document.getElementById("match-comparison-card").style.display = "block";
+        document.getElementById("query-face-preview").src = sessionStorage.getItem("uploadedQueryFace") || "";
+        document.getElementById("matched-face-preview").src = document.getElementById("profile-pic").src;
+        document.getElementById("top-match-score").textContent = `${matchScore}%`;
+
+        const score = parseFloat(matchScore);
+        const confidenceLabel = document.getElementById("confidence-rating-label");
+        let confidence = "LOW";
+        let confidenceColor = "var(--danger)";
+        if (score >= 95.0) {
+          confidence = "VERY HIGH";
+          confidenceColor = "var(--success)";
+        } else if (score >= 90.0) {
+          confidence = "HIGH";
+          confidenceColor = "var(--success)";
+        } else if (score >= 80.0) {
+          confidence = "MEDIUM";
+          confidenceColor = "var(--warning)";
+        }
+        confidenceLabel.textContent = `CONFIDENCE: ${confidence}`;
+        confidenceLabel.style.color = confidenceColor;
+
+        // Render alternate match candidates at the bottom
+        const candidatesRaw = sessionStorage.getItem("matchCandidates");
+        if (candidatesRaw) {
+          try {
+            const candidates = JSON.parse(candidatesRaw);
+            const secondarySection = document.getElementById("secondary-matches-section");
+            const secondaryContainer = document.getElementById("secondary-matches-container");
+            secondaryContainer.innerHTML = "";
+
+            const alternates = candidates.filter(c => c.id != personId);
+            if (alternates.length > 0) {
+              secondarySection.style.display = "block";
+              alternates.forEach(c => {
+                const card = document.createElement("div");
+                card.className = "match-card";
+                card.innerHTML = `
+                  <img src="${c.photoUrl ? API_BASE + c.photoUrl.replace('/api', '') : ''}" alt="Match Thumbnail">
+                  <div style="flex:1;">
+                    <div style="font-weight:700; font-size:14px; color:var(--text);">${escapeHtml(c.fullName)}</div>
+                    <div style="font-size:12px; color:var(--muted); font-family:'Orbitron',sans-serif; margin-top:2px;">${c.criminalId || `CR-${c.id}`}</div>
+                    <div style="font-size:12px; color:var(--accent); font-weight:700; margin-top:4px;">Score: ${c.matchScore.toFixed(2)}%</div>
+                  </div>
+                  <button type="button" class="secondary" style="padding:6px 12px; font-size:11px; border-radius:6px;" onclick="window.location.href='edit-person.html?id=${c.id}&matchScore=${c.matchScore.toFixed(2)}'">View Record</button>
+                `;
+                secondaryContainer.appendChild(card);
+              });
+            }
+          } catch (e) { }
+        }
+      }
+    }
+    loadPerson();
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // Handle photo change preview
+    document.getElementById("photo").addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+          document.getElementById("profile-pic").src = evt.target.result;
+          document.getElementById("profile-pic-container").style.display = "flex";
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    document.getElementById("edit-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!canEdit) return;
+      const errorMsg = document.getElementById("error-msg");
+      const successMsg = document.getElementById("success-msg");
+      errorMsg.textContent = "";
+      successMsg.textContent = "";
+
+      const body = {
+        fullName: document.getElementById("fullName").value.trim(),
+        dateOfBirth: document.getElementById("dob").value || null,
+        gender: document.getElementById("gender").value,
+        address: document.getElementById("address").value.trim(),
+        phoneNumber: document.getElementById("phoneNumber").value.trim(),
+        otherDetails: document.getElementById("otherDetails").value.trim(),
+
+        criminalId: document.getElementById("criminalId").value.trim(),
+        crimeCategory: document.getElementById("crimeCategory").value.trim(),
+        firNumber: document.getElementById("firNumber").value.trim(),
+        policeStation: document.getElementById("policeStation").value.trim(),
+        currentStatus: document.getElementById("currentStatus").value,
+        arrestDate: document.getElementById("arrestDate").value || null,
+        crimeDescription: document.getElementById("crimeDescription").value.trim()
+      };
+
+      const submitBtn = e.target.querySelector("button[type=submit]");
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = "Writing logs...";
+      submitBtn.disabled = true;
+
+      // 1. Upload photo first if selected
+      const photoFile = document.getElementById("photo").files[0];
+      if (photoFile) {
+        const formData = new FormData();
+        formData.append("photo", photoFile);
+
+        try {
+          const photoRes = await apiFetch(`/persons/${personId}/photo`, {
+            method: "POST",
+            body: formData
+          });
+          if (!photoRes.ok) {
+            errorMsg.textContent = "Biometric upload failed: " + await getApiError(photoRes, "Error uploading file.");
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            return;
+          }
+        } catch (err) {
+          errorMsg.textContent = "Biometric upload failed: " + err.message;
+          submitBtn.textContent = originalText;
+          submitBtn.disabled = false;
+          return;
+        }
+      }
+
+      // 2. Put the text fields JSON updates
+      const res = await apiFetch(`/persons/${personId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        errorMsg.textContent = await getApiError(res, "Failed to write changes to node registry.");
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        return;
+      }
+      successMsg.textContent = "CASE FILE SAVED AND HASHED.";
+      setTimeout(() => window.location.href = "view-persons.html", 800);
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "facedb-render",
+  "private": true,
+  "scripts": {
+    "build": "cd CriminalDB/backend && mvn -DskipTests package",
+    "start": "cd CriminalDB/backend && java -jar target/facedb-0.1.0.jar"
+  }
+}

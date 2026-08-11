@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>CriminalDB · Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>System Dashboard</h1>
+    <p class="subtitle" id="welcome-msg">Establishing secure connection...</p>
+
+    <!-- Animated HUD Grid -->
+    <div class="dash-grid">
+      <div class="dash-card" style="border-color: rgba(0, 229, 255, 0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div class="label">Total Records</div>
+          <span style="font-size: 16px;">📁</span>
+        </div>
+        <div class="value" id="stat-total">-</div>
+        <!-- Sparkline Graph -->
+        <svg viewBox="0 0 100 30"
+          style="width: 100%; height: 30px; stroke: var(--accent); fill: none; stroke-width: 1.5; filter: drop-shadow(0 0 3px var(--accent)); margin-top: 12px;">
+          <path d="M0,25 Q15,5 30,22 T60,12 T90,20" />
+        </svg>
+      </div>
+
+      <div class="dash-card" style="border-color: rgba(0, 255, 157, 0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div class="label">Arrested</div>
+          <span style="font-size: 16px;">👮</span>
+        </div>
+        <div class="value" id="stat-arrested" style="color: var(--success); text-shadow: 0 0 10px rgba(0,255,157,0.3);">
+          -</div>
+        <!-- Sparkline Graph -->
+        <svg viewBox="0 0 100 30"
+          style="width: 100%; height: 30px; stroke: var(--success); fill: none; stroke-width: 1.5; filter: drop-shadow(0 0 3px var(--success)); margin-top: 12px;">
+          <path d="M0,20 Q20,10 40,25 T80,15 T95,10" />
+        </svg>
+      </div>
+
+      <div class="dash-card" style="border-color: rgba(255, 77, 109, 0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div class="label">Active Wanted</div>
+          <span style="font-size: 16px;">🚨</span>
+        </div>
+        <div class="value" id="stat-wanted" style="color: var(--danger); text-shadow: 0 0 10px rgba(255,77,109,0.3);">-
+        </div>
+        <!-- Sparkline Graph -->
+        <svg viewBox="0 0 100 30"
+          style="width: 100%; height: 30px; stroke: var(--danger); fill: none; stroke-width: 1.5; filter: drop-shadow(0 0 3px var(--danger)); margin-top: 12px;">
+          <path d="M0,10 Q20,25 45,10 T80,22 T95,12" />
+        </svg>
+      </div>
+
+      <div class="dash-card" style="border-color: rgba(138, 92, 255, 0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div class="label">Closed Cases</div>
+          <span style="font-size: 16px;">✅</span>
+        </div>
+        <div class="value" id="stat-closed" style="color: var(--purple); text-shadow: 0 0 10px rgba(138,92,255,0.3);">-
+        </div>
+        <!-- Sparkline Graph -->
+        <svg viewBox="0 0 100 30"
+          style="width: 100%; height: 30px; stroke: var(--purple); fill: none; stroke-width: 1.5; filter: drop-shadow(0 0 3px var(--purple)); margin-top: 12px;">
+          <path d="M0,25 Q15,20 35,5 T70,18 T95,22" />
+        </svg>
+      </div>
+
+      <div class="dash-card" style="border-color: rgba(255, 200, 87, 0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div class="label">Today's Searches</div>
+          <span style="font-size: 16px;">🔍</span>
+        </div>
+        <div class="value" id="stat-searches"
+          style="color: var(--warning); text-shadow: 0 0 10px rgba(255,200,87,0.3);">-</div>
+        <!-- Sparkline Graph -->
+        <svg viewBox="0 0 100 30"
+          style="width: 100%; height: 30px; stroke: var(--warning); fill: none; stroke-width: 1.5; filter: drop-shadow(0 0 3px var(--warning)); margin-top: 12px;">
+          <path d="M0,22 Q25,12 50,25 T75,5 T95,18" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- Info Block -->
+    <div class="glass-card" style="margin-top: 32px;">
+      <h2>Operator Guide & Overview</h2>
+      <p style="color: var(--muted); font-size: 14px; line-height: 1.8; margin: 0;">
+        Welcome to the **CriminalDB Terminal**, the core biometric database system.
+        <br><br>
+        * Use the **Face Search** portal to match uploaded mugshots against stored records in the system database using
+        ArcFace and YuNet AI model matching.
+        <br>
+        * Use **View Records** to search, edit, or delete criminal files using their standard information parameters.
+        * Register new criminal profiles using **Add Person**. Secure activity logs are saved for auditing purposes.
+      </p>
+    </div>
+  </div>
+
+  <script src="js/api-config.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    initTopbar("dashboard.html");
+    document.getElementById("welcome-msg").textContent = `SECURE CONNECTION ESTABLISHED. Operator: ${Auth.getUsername()}.`;
+
+    async function loadStats() {
+      try {
+        const res = await apiFetch("/persons");
+        const data = await res.json();
+
+        document.getElementById("stat-total").textContent = data.length;
+
+        const arrested = data.filter(p => p.currentStatus === "Arrested").length;
+        document.getElementById("stat-arrested").textContent = arrested;
+
+        const wanted = data.filter(p => p.currentStatus === "Wanted").length;
+        document.getElementById("stat-wanted").textContent = wanted;
+
+        const closed = data.filter(p => p.currentStatus === "Closed" || p.currentStatus === "Bailed").length;
+        document.getElementById("stat-closed").textContent = closed;
+
+        // Query Today's Searches from audit log if admin, otherwise show static mock
+        let searches = 18;
+        if (Auth.isAdmin()) {
+          try {
+            const auditRes = await apiFetch("/audit");
+            const logs = await auditRes.json();
+            const todayStr = new Date().toISOString().substring(0, 10);
+            searches = logs.filter(l => l.timestamp.startsWith(todayStr) && (l.action === "SEARCH_PERSONS" || l.action === "MATCH_FACE")).length;
+          } catch (e) { }
+        }
+        document.getElementById("stat-searches").textContent = searches;
+
+      } catch (err) {
+        document.getElementById("stat-total").textContent = "?";
+        document.getElementById("stat-arrested").textContent = "?";
+        document.getElementById("stat-wanted").textContent = "?";
+        document.getElementById("stat-closed").textContent = "?";
+        document.getElementById("stat-searches").textContent = "?";
+      }
+    }
+    loadStats();
+  </script>
+</body>
+
+</html>

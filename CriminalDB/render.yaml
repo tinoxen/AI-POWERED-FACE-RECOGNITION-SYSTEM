@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: criminaldb
+    env: docker
+    plan: free
+
+    dockerfilePath: ./CriminalDB/Dockerfile
+    dockerContext: ./CriminalDB
+
+    healthCheckPath: /api/health
+
+    envVars:
+
+      - key: PORT
+        value: 10000
+
+      - key: APP_JWT_SECRET
+        generateValue: true
+
+      - key: APP_JWT_EXPIRATION_MS
+        value: 3600000
+
+      - key: APP_UPLOAD_DIR
+        value: /tmp/uploads
+
+      - key: ALLOWED_ORIGINS
+        value: https://criminaldb-lu4d.onrender.com
+
+      - key: APP_ADMIN_USERNAME
+        value: admin
+
+      - key: APP_ADMIN_PASSWORD
+        sync: false
+
+      - key: DB_HOST
+        sync: false
+
+      - key: DB_PORT
+        value: 4000
+
+      - key: DB_NAME
+        sync: false
+
+      - key: DB_USERNAME
+        sync: false
+
+      - key: DB_PASSWORD
+        sync: false
