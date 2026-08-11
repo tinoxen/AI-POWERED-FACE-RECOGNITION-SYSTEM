@@ -30,13 +30,22 @@ public class PersonService {
 
     public List<Person> search(String query) {
         if (query == null || query.isBlank()) return findAll();
-        // Numeric query -> treat as an ID lookup as well as a name search.
-        if (query.matches("\\d+")) {
-            return personRepository.findById(Long.parseLong(query))
-                    .map(List::of)
-                    .orElseGet(() -> personRepository.findByFullNameContainingIgnoreCase(query));
+        String normalizedQuery = query.trim();
+        // Numeric query -> treat as a database ID lookup as well as a field search.
+        List<Person> fieldMatches = personRepository
+                .findByFullNameContainingIgnoreCaseOrCriminalIdContainingIgnoreCaseOrFirNumberContainingIgnoreCase(
+                        normalizedQuery, normalizedQuery, normalizedQuery);
+        if (normalizedQuery.matches("\\d+")) {
+            return personRepository.findById(Long.parseLong(normalizedQuery))
+                    .<List<Person>>map(person -> {
+                        java.util.LinkedHashMap<Long, Person> results = new java.util.LinkedHashMap<>();
+                        results.put(person.getId(), person);
+                        fieldMatches.forEach(match -> results.putIfAbsent(match.getId(), match));
+                        return new java.util.ArrayList<>(results.values());
+                    })
+                    .orElse(fieldMatches);
         }
-        return personRepository.findByFullNameContainingIgnoreCase(query);
+        return fieldMatches;
     }
 
     public Person findById(Long id) {
@@ -48,8 +57,10 @@ public class PersonService {
         return personRepository.save(person);
     }
 
-    public void delete(Long id) {
-        personRepository.deleteById(id);
+    public Person delete(Long id) {
+        Person person = findById(id);
+        personRepository.delete(person);
+        return person;
     }
 
     public int convertExistingPhotosToWebP() {

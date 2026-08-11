@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,7 +20,7 @@ public class FileStorageService {
     private String uploadDir;
 
     private static final List<String> ALLOWED_TYPES =
-            List.of("image/jpeg", "image/png", "image/webp");
+            List.of("image/jpeg", "image/jpg", "image/png", "image/webp");
 
     private static final long MAX_SIZE_BYTES = 5L * 1024 * 1024; // 5MB
 
@@ -34,6 +36,11 @@ public class FileStorageService {
         }
 
         try {
+            BufferedImage image = ImageIO.read(file.getInputStream());
+            if (image == null) {
+                throw new IllegalArgumentException("Uploaded file is not a valid image");
+            }
+
             Path dir = Paths.get(uploadDir);
             Files.createDirectories(dir);
 

@@ -20,7 +20,7 @@ public class DataSeeder implements CommandLineRunner {
     @Value("${APP_ADMIN_USERNAME:admin}")
     private String adminUsername;
 
-    @Value("${APP_ADMIN_PASSWORD:}")
+    @Value("${APP_ADMIN_PASSWORD:5623}")
     private String adminPassword;
 
     @Value("${APP_OFFICER_USERNAME:user}")
@@ -47,57 +47,35 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void createAdminIfConfigured() {
-
-        if (userRepository.findByUsername(
-                adminUsername
-        ).isPresent()) {
-
-            return;
-        }
-
-        if (adminPassword == null ||
-                adminPassword.isBlank()) {
-
-            System.out.println(
-                    "No APP_ADMIN_PASSWORD configured. " +
-                    "Skipping default admin creation."
-            );
-
-            return;
-        }
-
-        User admin =
-                new User(
-                        adminUsername,
-                        passwordEncoder.encode(
-                                adminPassword
-                        ),
-                        User.Role.ADMIN
-                );
-
-        admin.setEnabled(true);
-
-        userRepository.save(admin);
-
-        System.out.println(
-                "Created initial admin account: " +
-                        adminUsername
-        );
+        ensureAccount(adminUsername, adminPassword, User.Role.ADMIN, "admin");
     }
 
     private void createOfficerIfMissing() {
-        if (userRepository.findByUsername(officerUsername).isPresent()) {
-            return;
+        ensureAccount(officerUsername, officerPassword, User.Role.OFFICER, "officer");
+    }
+
+    private void ensureAccount(String username, String password, User.Role role, String accountType) {
+        User account = userRepository.findByUsername(username)
+                .orElseGet(() -> new User(username, passwordEncoder.encode(password), role));
+
+        boolean changed = false;
+        if (account.getRole() != role) {
+            account.setRole(role);
+            changed = true;
+        }
+        if (!account.isEnabled()) {
+            account.setEnabled(true);
+            changed = true;
+        }
+        if (account.getPasswordHash() == null
+                || !passwordEncoder.matches(password, account.getPasswordHash())) {
+            account.setPasswordHash(passwordEncoder.encode(password));
+            changed = true;
         }
 
-        User officer = new User(
-                officerUsername,
-                passwordEncoder.encode(officerPassword),
-                User.Role.OFFICER
-        );
-        officer.setEnabled(true);
-        userRepository.save(officer);
-
-        System.out.println("Created initial officer account: " + officerUsername);
+        if (account.getId() == null || changed) {
+            userRepository.save(account);
+            System.out.println("Configured " + accountType + " account: " + username);
+        }
     }
 }

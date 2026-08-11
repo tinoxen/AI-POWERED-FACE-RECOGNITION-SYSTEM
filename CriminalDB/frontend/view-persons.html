@@ -10,10 +10,10 @@
 <body>
   <div class="container">
     <h1>Criminal Registry Files</h1>
-    <p class="subtitle">Search database records by full name or operator ID query.</p>
+    <p class="subtitle">Search database records by name, database ID, Criminal ID, or FIR number.</p>
 
     <div class="search-row" style="margin-bottom: 24px;">
-      <input type="text" id="search-input" placeholder="Search registry by name or ID...">
+      <input type="text" id="search-input" placeholder="Search by name, database ID, Criminal ID, or FIR...">
       <button id="search-btn">Search</button>
     </div>
 
@@ -108,7 +108,9 @@
       if (e.key === "Enter") loadPersons(e.target.value.trim());
     });
 
-    loadPersons();
+    const initialQuery = new URLSearchParams(window.location.search).get("q") || "";
+    document.getElementById("search-input").value = initialQuery;
+    loadPersons(initialQuery);
   </script>
 </body>
 

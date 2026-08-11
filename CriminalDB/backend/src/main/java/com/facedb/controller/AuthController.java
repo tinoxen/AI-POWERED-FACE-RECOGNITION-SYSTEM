@@ -117,19 +117,20 @@ public class AuthController {
 
         } catch (AuthenticationException e) {
 
-            log.error(
-                    "Authentication failed for user {}",
+            log.warn("Authentication failed for user {}", username);
+
+            writeAuditSafely(
                     username,
-                    e
+                    "LOGIN_FAILED",
+                    "Authentication failed",
+                    httpRequest
             );
 
             return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of(
-                            "error",
-                            "AUTHENTICATION_ERROR",
-                            "message",
-                            "Authentication service could not complete the request"
+                            "error", "INVALID_CREDENTIALS",
+                            "message", "Invalid username or password"
                     ));
 
         } catch (RuntimeException e) {

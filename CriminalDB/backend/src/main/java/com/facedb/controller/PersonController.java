@@ -54,7 +54,9 @@ public class PersonController {
     @GetMapping("/{id}/photo")
     public ResponseEntity<FileSystemResource> photo(@PathVariable Long id) {
         Person p = personService.findById(id);
-        if (p.getPhotoPath() == null) return ResponseEntity.notFound().build();
+        if (p.getPhotoPath() == null || !java.nio.file.Files.exists(java.nio.file.Paths.get(p.getPhotoPath()))) {
+            return ResponseEntity.notFound().build();
+        }
         
         MediaType mediaType = MediaType.IMAGE_JPEG;
         String path = p.getPhotoPath().toLowerCase();
@@ -104,6 +106,8 @@ public class PersonController {
                                   @RequestParam(required = false) String currentStatus,
                                   @RequestParam(required = false) MultipartFile photo,
                                   Authentication auth, HttpServletRequest req) throws Exception {
+        validateRequiredRecordFields(fullName, criminalId, crimeCategory, firNumber,
+                policeStation, currentStatus, dateOfBirth, arrestDate);
         if (photo == null || photo.isEmpty()) {
             throw new IllegalArgumentException("No mugshot photo provided. Please upload a clear front-facing face image.");
         }
@@ -148,6 +152,9 @@ public class PersonController {
     @PreAuthorize("hasRole('ADMIN')")
     public PersonResponse update(@PathVariable Long id, @RequestBody Person updates,
                                   Authentication auth, HttpServletRequest req) {
+        validateRequiredRecordFields(updates.getFullName(), updates.getCriminalId(),
+                updates.getCrimeCategory(), updates.getFirNumber(), updates.getPoliceStation(),
+                updates.getCurrentStatus(), updates.getDateOfBirth(), updates.getArrestDate());
         Person existing = personService.findById(id);
         existing.setFullName(updates.getFullName());
         existing.setDateOfBirth(updates.getDateOfBirth());
@@ -239,7 +246,14 @@ public class PersonController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id, Authentication auth, HttpServletRequest req) {
-        personService.delete(id);
+        Person deleted = personService.delete(id);
+        if (deleted.getPhotoPath() != null) {
+            try {
+                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(deleted.getPhotoPath()));
+            } catch (Exception e) {
+                log.warn("Could not remove deleted photo for person {}", id, e);
+            }
+        }
         auditService.log(auth.getName(), "DELETE_PERSON", id, null, req.getRemoteAddr());
         return ResponseEntity.noContent().build();
     }
@@ -257,5 +271,20 @@ public class PersonController {
         if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/jpg") && !contentType.equals("image/webp"))) {
             throw new IllegalArgumentException("Unsupported file type. Only JPG, JPEG, PNG, or WEBP are allowed.");
         }
+    }
+
+    private void validateRequiredRecordFields(String fullName, String criminalId,
+                                              String crimeCategory, String firNumber,
+                                              String policeStation, String currentStatus,
+                                              LocalDate dateOfBirth, LocalDate arrestDate) {
+        if (isBlank(fullName) || isBlank(criminalId) || isBlank(crimeCategory)
+                || isBlank(firNumber) || isBlank(policeStation) || isBlank(currentStatus)
+                || dateOfBirth == null || arrestDate == null) {
+            throw new IllegalArgumentException("Complete all required profile and case fields before publishing.");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

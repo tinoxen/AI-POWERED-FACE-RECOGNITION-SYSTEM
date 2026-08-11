@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface PersonRepository extends JpaRepository<Person, Long> {
     List<Person> findByFullNameContainingIgnoreCase(String name);
+    List<Person> findByFullNameContainingIgnoreCaseOrCriminalIdContainingIgnoreCaseOrFirNumberContainingIgnoreCase(
+            String fullName, String criminalId, String firNumber);
 }
