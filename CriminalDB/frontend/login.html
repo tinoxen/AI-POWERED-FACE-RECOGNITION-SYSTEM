@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <title>CriminalDB</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
   <!-- Animated HUD Background -->
   <div class="cyber-bg">
@@ -14,7 +12,6 @@
     <div class="hologram-glow"></div>
   </div>
   <div class="scanline-overlay"></div>
-
   <div class="center-screen">
     <div class="login-card">
       <div class="login-logo">
@@ -25,21 +22,17 @@
       </div>
       <p class="subtitle" style="text-align: center; margin-bottom: 24px;">Authorized operations only. Activity is
         recorded in security audit logs.</p>
-
       <form id="login-form">
         <label for="username">Username</label>
         <input type="text" id="username" autocomplete="username" placeholder="Enter operator ID" required>
-
         <label for="password">Password</label>
         <input type="password" id="password" autocomplete="current-password" placeholder="Enter authorization key"
           required>
-
         <div style="display: flex; align-items: center; gap: 8px; margin-top: 14px;">
           <input type="checkbox" id="show-password" style="cursor: pointer; width: auto; margin: 0;">
           <label for="show-password"
             style="margin: 0; cursor: pointer; user-select: none; font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0;">Show Password</label>
         </div>
-
         <div class="form-actions" style="margin-top: 24px;">
           <button type="submit" style="width:100%;">Authenticate</button>
         </div>
@@ -47,7 +40,6 @@
       </form>
     </div>
   </div>
-
   <script src="js/api-config.js"></script>
   <script src="js/api.js"></script>
   <script>
@@ -61,28 +53,24 @@
       e.preventDefault();
       const username = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value;
-      const errorMsg = document.getById("error-msg");
+      const errorMsg = document.getElementById("error-msg");
       errorMsg.textContent = "";
-
       try {
         const res = await fetch(API_BASE + "/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password })
         });
-
         if (res.status === 401) {
           errorMsg.textContent = "ACCESS DENIED: Invalid operator ID or password.";
           return;
         }
-
         if (!res.ok) {
           const errorText = await res.text();
           console.error("LOGIN STATUS:", res.status, errorText);
           errorMsg.textContent = `SERVICE ERROR (${res.status}): ${errorText || "The backend could not complete login."}`;
           return;
         }
-
         const data = await res.json();
         Auth.setSession(data.token, data.username, data.role);
         window.location.href = "dashboard.html";
@@ -92,5 +80,4 @@
     });
   </script>
 </body>
-
 </html>
