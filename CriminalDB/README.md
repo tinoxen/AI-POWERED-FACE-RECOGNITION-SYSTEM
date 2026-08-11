@@ -1,4 +1,4 @@
-# FaceDB — Biometric-Based Record Lookup (FYP Prototype)
+# CriminalDB — Biometric-Based Record Lookup (FYP Prototype)
 
 A prototype web application for managing person records with a face
 photo, built for a final-year project. **Uses synthetic/mock data and a
@@ -16,7 +16,7 @@ or law-enforcement system.**
 ## Project structure
 
 ```
-FaceDB/
+CriminalDB/
 ├── backend/            Spring Boot API
 │   └── src/main/java/com/facedb/
 │       ├── config/      Security config, default-admin seeder
