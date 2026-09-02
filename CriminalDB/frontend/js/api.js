@@ -99,7 +99,7 @@ async function apiFetch(path, options = {}) {
   const token = Auth.getToken();
   if (token) headers["Authorization"] = "Bearer " + token;
 
-  const response = await fetch(API_BASE + path, { ...options, headers });
+  const response = await fetch(apiUrl(path), { ...options, headers });
 
   if (response.status === 401) {
     Auth.logout();
