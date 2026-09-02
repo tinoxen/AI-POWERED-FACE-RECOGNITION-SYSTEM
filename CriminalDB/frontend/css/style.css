@@ -58,7 +58,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .app-wrapper { display: flex; min-height: 100vh; }
 .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 10; display: flex; width: 244px; flex-direction: column; padding: 26px 16px 18px; background: var(--sidebar); color: var(--sidebar-text); border-right: 1px solid rgba(255,255,255,.08); }
 .brand-title { display: flex; align-items: center; gap: 10px; margin: 0 12px 38px; color: #fff; font: 800 20px/1 'Manrope', sans-serif; letter-spacing: -.04em; }
-.brand-mark { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid var(--accent); border-radius: 7px; color: var(--accent); font-size: 22px; }
+.brand-mark { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid var(--accent); border-radius: 7px; color: var(--accent); }
+.brand-mark svg, .sidebar-nav a svg, .logout-link svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .sidebar-nav { display: flex; flex: 1; flex-direction: column; gap: 4px; }
 .sidebar-nav a, .logout-link { display: flex; align-items: center; gap: 13px; padding: 11px 12px; border: 1px solid transparent; border-radius: 6px; color: #9db5bb; font-weight: 600; transition: var(--transition); }
 .sidebar-nav a span, .logout-link span { width: 18px; color: #83a5ac; font-size: 19px; line-height: 1; text-align: center; }

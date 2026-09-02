@@ -29,7 +29,7 @@
             <th>Date of Birth</th>
             <th>Status</th>
             <th>Arrest/Add Date</th>
-            <th id="actions-header" style="display:none;">Actions</th>
+            <th id="actions-header">Actions</th>
           </tr>
         </thead>
         <tbody id="persons-tbody"></tbody>
@@ -44,8 +44,7 @@
     Auth.requireLogin();
     initTopbar("view-persons.html");
 
-    const isAdmin = Auth.isAdmin();
-    if (isAdmin) document.getElementById("actions-header").style.display = "";
+    const canManage = Auth.canManageRecords();
 
     async function loadPersons(query) {
       const tbody = document.getElementById("persons-tbody");
@@ -66,19 +65,21 @@
         const tr = document.createElement("tr");
         const statusClass = p.currentStatus ? p.currentStatus.toLowerCase() : "viewer";
         tr.innerHTML = `
-          <td>${p.photoUrl ? `<img class="avatar" src="${API_BASE}${p.photoUrl.replace('/api', '')}">` : `<div class="avatar"></div>`}</td>
+          <td>${p.photoUrl ? `<img class="avatar" alt="Biometric photo">` : `<div class="avatar"></div>`}</td>
           <td style="font-family:'Orbitron',sans-serif; font-weight:700; color:var(--accent);">${escapeHtml(p.criminalId || `CR-${p.id}`)}</td>
           <td style="font-weight:600;">${escapeHtml(p.fullName)}</td>
           <td>${p.gender || "-"}</td>
           <td>${p.dateOfBirth || "-"}</td>
           <td><span class="pill ${statusClass}">${p.currentStatus || "Registered"}</span></td>
           <td>${formatDate(p.createdAt)}</td>
-          ${isAdmin ? `<td class="row-actions">
-            <button class="secondary" onclick="editPerson(${p.id})">Edit</button>
-            <button class="danger" onclick="deletePerson(${p.id})">Delete</button>
-          </td>` : ""}
+          <td class="row-actions">
+            <button class="secondary" title="View record" onclick="viewPerson(${p.id})">◉ <span>View</span></button>
+            ${canManage ? `<button class="secondary" title="Edit record" onclick="editPerson(${p.id})">✎ <span>Edit</span></button>
+            <button class="danger" title="Delete record" onclick="deletePerson(${p.id})">× <span>Delete</span></button>` : ""}
+          </td>
         `;
         tbody.appendChild(tr);
+        if (p.photoUrl) loadProtectedImage(tr.querySelector(".avatar"), p.photoUrl);
       });
     }
 
@@ -89,6 +90,10 @@
     }
 
     function editPerson(id) {
+      window.location.href = `edit-person.html?id=${id}`;
+    }
+
+    function viewPerson(id) {
       window.location.href = `edit-person.html?id=${id}`;
     }
 

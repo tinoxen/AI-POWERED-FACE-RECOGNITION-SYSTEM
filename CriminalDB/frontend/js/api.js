@@ -19,6 +19,22 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 
+function apiUrl(path) {
+  return API_BASE + path.replace(/^\/api/, "");
+}
+
+async function loadProtectedImage(imageElement, photoUrl) {
+  if (!imageElement || !photoUrl) return;
+  try {
+    const response = await apiFetch(photoUrl);
+    if (!response.ok) return;
+    const blob = await response.blob();
+    imageElement.src = URL.createObjectURL(blob);
+  } catch (_) {
+    imageElement.removeAttribute("src");
+  }
+}
+
 function initTheme() {
   const savedTheme = localStorage.getItem("CriminalDB_theme");
   const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -63,6 +79,7 @@ const Auth = {
   isLoggedIn() { return !!this.getToken(); },
 
   isAdmin() { return this.getRole() === "ADMIN"; },
+  canManageRecords() { return ["ADMIN", "OFFICER"].includes(this.getRole()); },
 
   requireLogin() {
     if (!this.isLoggedIn()) {
@@ -129,11 +146,13 @@ function initTopbar(activePage) {
   // 2. Build Sidebar Navigation Links
   const isAdmin = Auth.isAdmin();
   let links = [
-    { href: "dashboard.html", label: "Dashboard", icon: "▦" },
-    { href: "view-persons.html", label: "View Records", icon: "□" },
-    { href: "add-person.html", label: "Add Person", icon: "+" },
-    { href: "face-search.html", label: "Face Search", icon: "⌕" },
+    { href: "dashboard.html", label: "Dashboard", icon: "<svg viewBox='0 0 24 24' aria-hidden='true'><rect x='3' y='3' width='7' height='7'/><rect x='14' y='3' width='7' height='7'/><rect x='3' y='14' width='7' height='7'/><rect x='14' y='14' width='7' height='7'/></svg>" },
+    { href: "view-persons.html", label: "View Records", icon: "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M3 5h18M3 12h18M3 19h18'/></svg>" },
+    { href: "face-search.html", label: "Face Search", icon: "<svg viewBox='0 0 24 24' aria-hidden='true'><circle cx='10.5' cy='10.5' r='6.5'/><path d='m16 16 5 5'/></svg>" },
   ];
+  if (Auth.canManageRecords()) {
+    links.splice(2, 0, { href: "add-person.html", label: "Add Person", icon: "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M12 5v14M5 12h14'/></svg>" });
+  }
   if (isAdmin) {
     links.push({ href: "audit-logs.html", label: "Audit Logs", icon: "≡" });
   }
@@ -141,7 +160,7 @@ function initTopbar(activePage) {
   const sidebarHtml = `
     <div class="sidebar">
       <div class="brand-title">
-        <span class="brand-mark" aria-hidden="true">+</span> CriminalDB
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.5-2.8 8.2-7 10-4.2-1.8-7-5.5-7-10V6l7-3Z"/><path d="M12 8v8M8 12h8"/></svg></span> CriminalDB
       </div>
       <div class="sidebar-nav">
         ${links.map(l => `

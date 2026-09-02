@@ -4,9 +4,13 @@ import random
 import uuid
 import mimetypes
 import sys
+import os
 from datetime import date, timedelta
 
-API_BASE = "http://localhost:8080/api"
+API_BASE = os.getenv("CRIMINALDB_API_BASE", "http://localhost:10000/api").rstrip("/")
+ADMIN_USERNAME = os.getenv("CRIMINALDB_USERNAME") or os.getenv("APP_ADMIN_USERNAME")
+ADMIN_PASSWORD = os.getenv("CRIMINALDB_PASSWORD") or os.getenv("APP_ADMIN_PASSWORD")
+WIPE_EXISTING = os.getenv("CRIMINALDB_WIPE_EXISTING", "false").lower() == "true"
 
 # --- Fictional Dataset Source Arrays ---
 first_names_male = ["James", "John", "Robert", "Michael", "William", "David", "Richard", "Joseph", "Thomas", "Charles", "Christopher", "Daniel", "Matthew", "Anthony", "Mark", "Donald", "Steven", "Paul", "Andrew", "Joshua", "Kenneth", "Kevin", "Brian", "George", "Edward", "Ronald", "Timothy", "Jason", "Jeffrey", "Ryan", "Jacob", "Gary", "Nicholas", "Eric", "Jonathan", "Stephen", "Larry", "Justin", "Scott", "Brandon", "Benjamin", "Samuel", "Gregory", "Frank", "Alexander", "Raymond", "Patrick", "Jack", "Dennis", "Jerry"]
@@ -130,10 +134,14 @@ def encode_multipart_formdata(fields, files):
     return content_type, body
 
 def main():
+    if not ADMIN_USERNAME or not ADMIN_PASSWORD:
+        print("Set CRIMINALDB_USERNAME and CRIMINALDB_PASSWORD before running this script.", file=sys.stderr)
+        sys.exit(2)
+
     print("[1/3] Authenticating as ADMIN on Node Registry...", flush=True)
     
     # 1. Authenticate with server
-    login_data = json.dumps({"username": "admin", "password": "5623"}).encode()
+    login_data = json.dumps({"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD}).encode()
     req = urllib.request.Request(
         f"{API_BASE}/auth/login",
         data=login_data,
@@ -149,21 +157,24 @@ def main():
         print(f"FAILED TO AUTHENTICATE. Make sure Spring Boot is running! Details: {e}", file=sys.stderr, flush=True)
         sys.exit(1)
 
-    print("Wiping existing records for clean slate...")
-    try:
+    if WIPE_EXISTING:
+      print("Wiping existing records for clean slate...")
+      try:
         req_list = urllib.request.Request(f"{API_BASE}/persons", headers={"Authorization": f"Bearer {token}"})
         with urllib.request.urlopen(req_list) as res_list:
-            current_persons = json.loads(res_list.read().decode())
+          current_persons = json.loads(res_list.read().decode())
         for p in current_persons:
-            pid = p["id"]
-            req_del = urllib.request.Request(f"{API_BASE}/persons/{pid}", headers={"Authorization": f"Bearer {token}"}, method="DELETE")
-            try:
-                urllib.request.urlopen(req_del)
-            except Exception as e:
-                print(f"Failed to delete existing {pid}: {e}", flush=True)
+          pid = p["id"]
+          req_del = urllib.request.Request(f"{API_BASE}/persons/{pid}", headers={"Authorization": f"Bearer {token}"}, method="DELETE")
+          try:
+            urllib.request.urlopen(req_del)
+          except Exception as e:
+            print(f"Failed to delete existing {pid}: {e}", flush=True)
         print("Wipe completed.", flush=True)
-    except Exception as e:
+      except Exception as e:
         print(f"Wipe failed: {e}", flush=True)
+    else:
+      print("Keeping existing records. Set CRIMINALDB_WIPE_EXISTING=true to delete them first.", flush=True)
 
     print("[2/3] Registering 20 classified profiles...", flush=True)
 

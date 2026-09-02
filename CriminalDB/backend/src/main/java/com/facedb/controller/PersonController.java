@@ -1,23 +1,33 @@
 package com.facedb.controller;
 
-import com.facedb.dto.PersonResponse;
-import com.facedb.model.Person;
-import com.facedb.service.AuditService;
-import com.facedb.service.FileStorageService;
-import com.facedb.service.PersonService;
-import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDate;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.time.LocalDate;
-import java.util.List;
+import com.facedb.dto.PersonResponse;
+import com.facedb.model.Person;
+import com.facedb.service.AuditService;
+import com.facedb.service.FileStorageService;
+import com.facedb.service.PersonService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/persons")
@@ -151,7 +161,7 @@ public class PersonController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
     public PersonResponse update(@PathVariable Long id, @RequestBody Person updates,
                                   Authentication auth, HttpServletRequest req) {
         validateRequiredRecordFields(updates.getFullName(), updates.getCriminalId(),
@@ -178,7 +188,7 @@ public class PersonController {
     }
 
     @PostMapping(value = "/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
     public PersonResponse updatePhoto(@PathVariable Long id, @RequestParam MultipartFile photo,
                                       Authentication auth, HttpServletRequest req) throws Exception {
         Person p = personService.findById(id);
@@ -246,7 +256,7 @@ public class PersonController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
     public ResponseEntity<Void> delete(@PathVariable Long id, Authentication auth, HttpServletRequest req) {
         Person deleted = personService.delete(id);
         if (deleted.getPhotoPath() != null) {
