@@ -19,6 +19,30 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 
+function initTheme() {
+  const savedTheme = localStorage.getItem("CriminalDB_theme");
+  const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  document.documentElement.dataset.theme = savedTheme || systemTheme;
+}
+
+function toggleTheme() {
+  const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = nextTheme;
+  localStorage.setItem("CriminalDB_theme", nextTheme);
+  updateThemeToggle();
+}
+
+function updateThemeToggle() {
+  const toggle = document.getElementById("theme-toggle");
+  if (!toggle) return;
+  const isDark = document.documentElement.dataset.theme === "dark";
+  toggle.innerHTML = isDark ? "&#9788;<span>Light mode</span>" : "&#9681;<span>Dark mode</span>";
+  toggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+  toggle.title = isDark ? "Switch to light mode" : "Switch to dark mode";
+}
+
+initTheme();
+
 const Auth = {
   getToken() { return localStorage.getItem("CriminalDB_token"); },
   getUsername() { return localStorage.getItem("CriminalDB_username"); },
@@ -85,33 +109,33 @@ function formatDate(isoString) {
 }
 
 function initTopbar(activePage) {
-  // 1. Inject animated background
+  // 1. Inject the shared page atmosphere
   const bgContainer = document.createElement("div");
   bgContainer.innerHTML = `
     <div class="cyber-bg">
-      <div class="cyber-grid"></div>
-      <div class="hologram-glow"></div>
+      <div class="cyber-grid" aria-hidden="true"></div>
+      <div class="hologram-glow" aria-hidden="true"></div>
     </div>
-    <div class="scanline-overlay"></div>
+    <div class="scanline-overlay" aria-hidden="true"></div>
   `;
   document.body.appendChild(bgContainer);
 
   // 2. Build Sidebar Navigation Links
   const isAdmin = Auth.isAdmin();
   let links = [
-    { href: "dashboard.html", label: "Dashboard", icon: "📊" },
-    { href: "view-persons.html", label: "View Records", icon: "📁" },
-    { href: "add-person.html", label: "Add Person", icon: "👤" },
-    { href: "face-search.html", label: "Face Search", icon: "🔍" },
+    { href: "dashboard.html", label: "Dashboard", icon: "▦" },
+    { href: "view-persons.html", label: "View Records", icon: "□" },
+    { href: "add-person.html", label: "Add Person", icon: "+" },
+    { href: "face-search.html", label: "Face Search", icon: "⌕" },
   ];
   if (isAdmin) {
-    links.push({ href: "audit-logs.html", label: "Audit Logs", icon: "📜" });
+    links.push({ href: "audit-logs.html", label: "Audit Logs", icon: "≡" });
   }
 
   const sidebarHtml = `
     <div class="sidebar">
       <div class="brand-title">
-        <span>🛡️</span> CriminalDB
+        <span class="brand-mark" aria-hidden="true">+</span> CriminalDB
       </div>
       <div class="sidebar-nav">
         ${links.map(l => `
@@ -121,8 +145,8 @@ function initTopbar(activePage) {
         `).join("")}
       </div>
       <div class="sidebar-footer">
-        <a href="#" id="logout-link" style="display:flex; align-items:center; gap:14px; padding:12px 16px; border-radius:12px; color:var(--danger); font-size:14px; font-weight:600; text-decoration:none; border:1px solid transparent; transition:var(--transition);" onmouseover="this.style.background='rgba(255,77,109,0.08)'; this.style.borderColor='rgba(255,77,109,0.2)';" onmouseout="this.style.background='transparent'; this.style.borderColor='transparent';">
-          <span>🚪</span> Logout
+        <a href="#" id="logout-link" class="logout-link">
+          <span aria-hidden="true">↪</span> Sign out
         </a>
       </div>
     </div>
@@ -136,6 +160,7 @@ function initTopbar(activePage) {
         <div class="hud-status-text">SECURE NODE // OPERATOR: <span>${Auth.getUsername() || "UNKNOWN"}</span></div>
       </div>
       <div class="hud-right">
+        <button type="button" id="theme-toggle" class="theme-toggle"></button>
         <div class="hud-time" id="hud-clock">00:00:00</div>
         <div class="hud-user">
           <div class="pill ${isAdmin ? 'admin' : 'officer'}">${Auth.getRole() || ""}</div>
@@ -178,6 +203,8 @@ function initTopbar(activePage) {
     e.preventDefault();
     Auth.logout();
   });
+  document.getElementById("theme-toggle").addEventListener("click", toggleTheme);
+  updateThemeToggle();
 
   // Live clock ticking
   const updateClock = () => {
