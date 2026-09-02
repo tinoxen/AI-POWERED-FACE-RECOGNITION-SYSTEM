@@ -10,9 +10,13 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -20,13 +24,13 @@ public class DataSeeder implements CommandLineRunner {
     @Value("${APP_ADMIN_USERNAME:admin}")
     private String adminUsername;
 
-    @Value("${APP_ADMIN_PASSWORD:5623}")
+    @Value("${APP_ADMIN_PASSWORD:}")
     private String adminPassword;
 
     @Value("${APP_OFFICER_USERNAME:user}")
     private String officerUsername;
 
-    @Value("${APP_OFFICER_PASSWORD:5623}")
+    @Value("${APP_OFFICER_PASSWORD:}")
     private String officerPassword;
 
     public DataSeeder(
@@ -55,6 +59,10 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void ensureAccount(String username, String password, User.Role role, String accountType) {
+        if (username == null || username.isBlank() || password == null || password.isBlank()) {
+            log.warn("Skipping {} account seeding because credentials are not configured", accountType);
+            return;
+        }
         User account = userRepository.findByUsername(username)
                 .orElseGet(() -> new User(username, passwordEncoder.encode(password), role));
 
@@ -75,7 +83,7 @@ public class DataSeeder implements CommandLineRunner {
 
         if (account.getId() == null || changed) {
             userRepository.save(account);
-            System.out.println("Configured " + accountType + " account: " + username);
+            log.info("Configured {} account: {}", accountType, username);
         }
     }
 }

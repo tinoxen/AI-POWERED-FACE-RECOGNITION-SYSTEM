@@ -67,7 +67,7 @@
         const statusClass = p.currentStatus ? p.currentStatus.toLowerCase() : "viewer";
         tr.innerHTML = `
           <td>${p.photoUrl ? `<img class="avatar" src="${API_BASE}${p.photoUrl.replace('/api', '')}">` : `<div class="avatar"></div>`}</td>
-          <td style="font-family:'Orbitron',sans-serif; font-weight:700; color:var(--accent);">${p.criminalId || `CR-${p.id}`}</td>
+          <td style="font-family:'Orbitron',sans-serif; font-weight:700; color:var(--accent);">${escapeHtml(p.criminalId || `CR-${p.id}`)}</td>
           <td style="font-weight:600;">${escapeHtml(p.fullName)}</td>
           <td>${p.gender || "-"}</td>
           <td>${p.dateOfBirth || "-"}</td>

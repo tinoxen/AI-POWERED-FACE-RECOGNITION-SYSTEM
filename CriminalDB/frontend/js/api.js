@@ -78,7 +78,7 @@ const Auth = {
 
 // Wraps fetch() to attach the bearer token and handle 401s uniformly.
 async function apiFetch(path, options = {}) {
-  const headers = options.headers || {};
+  const headers = { ...(options.headers || {}) };
   const token = Auth.getToken();
   if (token) headers["Authorization"] = "Bearer " + token;
 
@@ -89,6 +89,12 @@ async function apiFetch(path, options = {}) {
     throw new Error("Session expired. Please log in again.");
   }
   return response;
+}
+
+function escapeHtml(value) {
+  const div = document.createElement("div");
+  div.textContent = value == null ? "" : String(value);
+  return div.innerHTML;
 }
 
 async function getApiError(response, fallback) {

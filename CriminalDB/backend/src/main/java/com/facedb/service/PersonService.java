@@ -19,9 +19,11 @@ import java.util.UUID;
 public class PersonService {
 
     private final PersonRepository personRepository;
+    private final FileStorageService fileStorageService;
 
-    public PersonService(PersonRepository personRepository) {
+    public PersonService(PersonRepository personRepository, FileStorageService fileStorageService) {
         this.personRepository = personRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     public List<Person> findAll() {
@@ -36,7 +38,13 @@ public class PersonService {
                 .findByFullNameContainingIgnoreCaseOrCriminalIdContainingIgnoreCaseOrFirNumberContainingIgnoreCase(
                         normalizedQuery, normalizedQuery, normalizedQuery);
         if (normalizedQuery.matches("\\d+")) {
-            return personRepository.findById(Long.parseLong(normalizedQuery))
+            Long databaseId;
+            try {
+                databaseId = Long.parseLong(normalizedQuery);
+            } catch (NumberFormatException e) {
+                return fieldMatches;
+            }
+            return personRepository.findById(databaseId)
                     .<List<Person>>map(person -> {
                         java.util.LinkedHashMap<Long, Person> results = new java.util.LinkedHashMap<>();
                         results.put(person.getId(), person);
@@ -65,7 +73,7 @@ public class PersonService {
 
     public int convertExistingPhotosToWebP() {
         List<Person> people = personRepository.findAll();
-        Path uploadsDir = Paths.get("uploads");
+        Path uploadsDir = fileStorageService.getUploadDirectory();
         int convertedCount = 0;
 
         for (Person person : people) {
@@ -74,7 +82,12 @@ public class PersonService {
                 continue;
             }
 
-            Path sourcePath = Paths.get(photoPath);
+            Path sourcePath;
+            try {
+                sourcePath = fileStorageService.resolveStoredPath(photoPath);
+            } catch (IllegalArgumentException e) {
+                continue;
+            }
             if (!Files.exists(sourcePath)) {
                 continue;
             }
@@ -117,7 +130,7 @@ public class PersonService {
             // Many Linux distributions no longer provide a `python` alias.
             ProcessBuilder pb = new ProcessBuilder("python3", scriptPath, absolutePath);
             pb.environment().put("OPENCV_LOG_LEVEL", "ERROR");
-            pb.redirectErrorStream(false);
+            pb.redirectErrorStream(true);
             Process process = pb.start();
             
             java.io.BufferedReader reader = new java.io.BufferedReader(
@@ -130,24 +143,15 @@ public class PersonService {
                 output.append(line).append("\n");
             }
             
-            int exitCode = process.waitFor();
             String result = output.toString().trim();
+            int exitCode = process.waitFor();
             if (exitCode != 0) {
-                java.io.BufferedReader errReader = new java.io.BufferedReader(
-                        new java.io.InputStreamReader(process.getErrorStream())
-                );
-                StringBuilder errOutput = new StringBuilder();
-                while ((line = errReader.readLine()) != null) {
-                    errOutput.append(line).append("\n");
-                }
-                String errResult = errOutput.toString().trim();
-                
-                if (errResult.contains("Error:")) {
-                    int errIdx = errResult.indexOf("Error:");
-                    String errLine = errResult.substring(errIdx).split("\n")[0];
+                if (result.contains("Error:")) {
+                    int errIdx = result.indexOf("Error:");
+                    String errLine = result.substring(errIdx).split("\n")[0];
                     throw new IllegalArgumentException(errLine.replace("Error:", "").trim());
                 }
-                throw new RuntimeException("Python face embedding extraction failed: " + errResult);
+                throw new RuntimeException("Python face embedding extraction failed: " + result);
             }
             return result;
         } catch (Exception e) {

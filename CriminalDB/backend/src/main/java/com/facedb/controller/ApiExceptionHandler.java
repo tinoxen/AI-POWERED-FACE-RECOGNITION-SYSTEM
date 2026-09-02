@@ -6,6 +6,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -17,7 +19,13 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> invalidRequest(IllegalArgumentException e) {
-        return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        String message = e.getMessage() == null ? "Invalid request" : e.getMessage();
+        return ResponseEntity.badRequest().body(Map.of("message", message));
+    }
+
+    @ExceptionHandler({MissingServletRequestPartException.class, MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<Map<String, String>> malformedRequest(Exception e) {
+        return ResponseEntity.badRequest().body(Map.of("message", "Request data is invalid or incomplete"));
     }
 
     @ExceptionHandler(NoSuchElementException.class)

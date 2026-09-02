@@ -5,12 +5,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Iterator;
 import java.util.UUID;
 
 @Service
@@ -36,15 +39,32 @@ public class FileStorageService {
         }
 
         try {
-            BufferedImage image = ImageIO.read(file.getInputStream());
-            if (image == null) {
-                throw new IllegalArgumentException("Uploaded file is not a valid image");
+            String imageFormat;
+            try (ImageInputStream imageInput = ImageIO.createImageInputStream(file.getInputStream())) {
+                if (imageInput == null) {
+                    throw new IllegalArgumentException("Uploaded file is not a valid image");
+                }
+                Iterator<ImageReader> readers = ImageIO.getImageReaders(imageInput);
+                if (!readers.hasNext()) {
+                    throw new IllegalArgumentException("Uploaded file is not a valid image");
+                }
+                ImageReader reader = readers.next();
+                try {
+                    reader.setInput(imageInput, true, true);
+                    imageFormat = reader.getFormatName().toLowerCase();
+                } finally {
+                    reader.dispose();
+                }
+            }
+            if (!(imageFormat.equals("jpeg") || imageFormat.equals("jpg")
+                    || imageFormat.equals("png") || imageFormat.equals("webp"))) {
+                throw new IllegalArgumentException("Only JPEG, PNG, or WEBP images are allowed");
             }
 
-            Path dir = Paths.get(uploadDir);
+            Path dir = getUploadDirectory();
             Files.createDirectories(dir);
 
-            String filename = UUID.randomUUID() + extensionFor(file.getContentType());
+            String filename = UUID.randomUUID() + extensionFor(imageFormat);
             Path target = dir.resolve(filename).normalize();
             if (!target.startsWith(dir)) {
                 throw new IllegalArgumentException("Invalid file path");
@@ -64,10 +84,25 @@ public class FileStorageService {
         return Paths.get(uploadDir).toAbsolutePath().normalize();
     }
 
-    private String extensionFor(String contentType) {
-        return switch (contentType) {
-            case "image/png" -> ".png";
-            case "image/webp" -> ".webp";
+    public Path resolveStoredPath(String storedPath) {
+        if (storedPath == null || storedPath.isBlank()) {
+            throw new IllegalArgumentException("Stored file path cannot be empty");
+        }
+        Path uploadDirectory = getUploadDirectory();
+        Path candidate = Paths.get(storedPath);
+        Path resolved = candidate.isAbsolute()
+            ? candidate.toAbsolutePath().normalize()
+            : uploadDirectory.resolve(candidate.getFileName()).normalize();
+        if (!resolved.startsWith(uploadDirectory)) {
+            throw new IllegalArgumentException("Stored file path is outside the upload directory");
+        }
+        return resolved;
+    }
+
+    private String extensionFor(String imageFormat) {
+        return switch (imageFormat) {
+            case "png" -> ".png";
+            case "webp" -> ".webp";
             default -> ".jpg";
         };
     }

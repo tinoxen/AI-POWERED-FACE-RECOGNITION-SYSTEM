@@ -54,12 +54,14 @@ public class PersonController {
     @GetMapping("/{id}/photo")
     public ResponseEntity<FileSystemResource> photo(@PathVariable Long id) {
         Person p = personService.findById(id);
-        if (p.getPhotoPath() == null || !java.nio.file.Files.exists(java.nio.file.Paths.get(p.getPhotoPath()))) {
+        if (p.getPhotoPath() == null) {
             return ResponseEntity.notFound().build();
         }
+        java.nio.file.Path photoPath = fileStorageService.resolveStoredPath(p.getPhotoPath());
+        if (!java.nio.file.Files.exists(photoPath)) return ResponseEntity.notFound().build();
         
         MediaType mediaType = MediaType.IMAGE_JPEG;
-        String path = p.getPhotoPath().toLowerCase();
+        String path = photoPath.toString().toLowerCase();
         if (path.endsWith(".png")) {
             mediaType = MediaType.IMAGE_PNG;
         } else if (path.endsWith(".webp")) {
@@ -70,7 +72,7 @@ public class PersonController {
         
         return ResponseEntity.ok()
                 .contentType(mediaType)
-                .body(new FileSystemResource(p.getPhotoPath()));
+                .body(new FileSystemResource(photoPath));
     }
 
     @PostMapping(value = "/match", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -85,7 +87,7 @@ public class PersonController {
             return personService.findTopMatches(queryEmbedding, 5);
         } finally {
             try {
-                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(path));
+                java.nio.file.Files.deleteIfExists(fileStorageService.resolveStoredPath(path));
             } catch (Exception ignored) {}
         }
     }
@@ -195,7 +197,7 @@ public class PersonController {
         Person saved = personService.save(p);
         if (previousPhotoPath != null && !previousPhotoPath.equals(path)) {
             try {
-                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(previousPhotoPath));
+                java.nio.file.Files.deleteIfExists(fileStorageService.resolveStoredPath(previousPhotoPath));
             } catch (Exception e) {
                 log.warn("Could not remove replaced photo for person {}", id, e);
             }
@@ -249,7 +251,7 @@ public class PersonController {
         Person deleted = personService.delete(id);
         if (deleted.getPhotoPath() != null) {
             try {
-                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(deleted.getPhotoPath()));
+                java.nio.file.Files.deleteIfExists(fileStorageService.resolveStoredPath(deleted.getPhotoPath()));
             } catch (Exception e) {
                 log.warn("Could not remove deleted photo for person {}", id, e);
             }

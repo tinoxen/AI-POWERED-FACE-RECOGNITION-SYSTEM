@@ -111,15 +111,17 @@ To try it without MySQL first, run with the in-memory H2 profile instead:
 mvn spring-boot:run -Dspring-boot.run.profiles=h2
 ```
 
-On first startup the app seeds a default admin account:
+On first startup the app seeds an admin account only when both
+`APP_ADMIN_USERNAME` and `APP_ADMIN_PASSWORD` are configured. It also seeds an
+officer account when `APP_OFFICER_USERNAME` and `APP_OFFICER_PASSWORD` are set:
 
 ```
-username: admin
-password: 5623
+APP_ADMIN_USERNAME=admin
+APP_ADMIN_PASSWORD=<strong-random-password>
 ```
 
-**Change this password immediately** — it's only there so the app is usable
-out of the box.
+There are no built-in production passwords. Set these credentials through the
+environment before startup and rotate them according to your deployment policy.
 
 ### 2. Frontend
 

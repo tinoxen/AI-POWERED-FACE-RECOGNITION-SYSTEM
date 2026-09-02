@@ -79,6 +79,13 @@ public class SecurityConfig {
                 csrf.disable()
             )
 
+            .headers(headers -> headers
+                .frameOptions(frame -> frame.deny())
+                .contentTypeOptions(contentType -> {})
+                .referrerPolicy(referrer -> referrer
+                    .policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+            )
+
             .sessionManagement(session ->
                 session.sessionCreationPolicy(
                     SessionCreationPolicy.STATELESS
