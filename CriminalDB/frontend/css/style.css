@@ -106,6 +106,13 @@ h2 { margin: 0 0 20px; color: var(--text); font-size: 18px; letter-spacing: -.02
 label { display: block; margin: 17px 0 7px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .03em; }
 input[type=text], input[type=password], input[type=date], textarea, select { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 5px; background: var(--panel-2) !important; color: var(--text); transition: var(--transition); }
 input, select, textarea { min-width: 0; }
+.password-field { position: relative; }
+.password-field input { padding-right: 46px; }
+.password-toggle { position: absolute; top: 50%; right: 7px; display: grid; width: 34px; height: 34px; min-height: 0; padding: 6px; transform: translateY(-50%); border: 0; background: transparent; color: var(--muted); }
+.password-toggle:hover { transform: translateY(-50%); border-color: transparent; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); }
+.password-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.password-toggle .eye-slash, .password-toggle[data-visible="true"] .eye-open { display: none; }
+.password-toggle[data-visible="true"] .eye-slash { display: block; }
 textarea { min-height: 100px; resize: vertical; }
 input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--muted) 72%, transparent); }
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); }
