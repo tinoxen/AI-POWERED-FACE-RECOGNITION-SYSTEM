@@ -1,19 +1,19 @@
 package com.facedb.service;
 
-import com.facedb.dto.PersonResponse;
-import com.facedb.model.Person;
-import com.facedb.repository.PersonRepository;
-import org.springframework.stereotype.Service;
-
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+
+import javax.imageio.ImageIO;
+
+import org.springframework.stereotype.Service;
+
+import com.facedb.dto.PersonResponse;
+import com.facedb.model.Person;
+import com.facedb.repository.PersonRepository;
 
 @Service
 public class PersonService {
@@ -125,6 +125,9 @@ public class PersonService {
         try {
             String absolutePath = new java.io.File(photoPath).getAbsolutePath();
             String scriptPath = "scripts/extract_embedding.py";
+            if (!Files.exists(Paths.get(scriptPath))) {
+                scriptPath = "backend/scripts/extract_embedding.py";
+            }
             
             // Use the Python 3 executable installed by the deployment image.
             // Many Linux distributions no longer provide a `python` alias.
@@ -143,17 +146,28 @@ public class PersonService {
                 output.append(line).append("\n");
             }
             
-            String result = output.toString().trim();
+            String combinedOutput = output.toString().trim();
             int exitCode = process.waitFor();
             if (exitCode != 0) {
-                if (result.contains("Error:")) {
-                    int errIdx = result.indexOf("Error:");
-                    String errLine = result.substring(errIdx).split("\n")[0];
+                if (combinedOutput.contains("Error:")) {
+                    int errIdx = combinedOutput.indexOf("Error:");
+                    String errLine = combinedOutput.substring(errIdx).split("\n")[0];
                     throw new IllegalArgumentException(errLine.replace("Error:", "").trim());
                 }
-                throw new RuntimeException("Python face embedding extraction failed: " + result);
+                throw new RuntimeException("Python face embedding extraction failed: " + combinedOutput);
             }
-            return result;
+            String[] outputLines = combinedOutput.split("\\R");
+            String embedding = outputLines[outputLines.length - 1].trim();
+            String[] values = embedding.split(",");
+            if (values.length != 512) {
+                throw new RuntimeException("Face embedding service returned an invalid vector");
+            }
+            for (String value : values) {
+                if (!Double.isFinite(Double.parseDouble(value))) {
+                    throw new RuntimeException("Face embedding service returned an invalid vector");
+                }
+            }
+            return embedding;
         } catch (Exception e) {
             if (e instanceof IllegalArgumentException) {
                 throw (IllegalArgumentException) e;
@@ -176,6 +190,7 @@ public class PersonService {
             for (int i = 0; i < tokens1.length; i++) {
                 double valA = Double.parseDouble(tokens1[i]);
                 double valB = Double.parseDouble(tokens2[i]);
+                if (!Double.isFinite(valA) || !Double.isFinite(valB)) return 0.0;
                 dotProduct += valA * valB;
                 normA += valA * valA;
                 normB += valB * valB;

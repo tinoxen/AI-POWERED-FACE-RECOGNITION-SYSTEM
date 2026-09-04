@@ -160,7 +160,7 @@ function initTopbar(activePage) {
   const sidebarHtml = `
     <div class="sidebar">
       <div class="brand-title">
-        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.5-2.8 8.2-7 10-4.2-1.8-7-5.5-7-10V6l7-3Z"/><path d="M12 8v8M8 12h8"/></svg></span> CriminalDB
+        <img class="brand-logo" src="assets/criminaldb-logo.svg" alt="CriminalDB">
       </div>
       <div class="sidebar-nav">
         ${links.map(l => `
@@ -182,7 +182,7 @@ function initTopbar(activePage) {
     <div class="top-hud">
       <div class="hud-left">
         <div class="hud-status-dot"></div>
-        <div class="hud-status-text">SECURE NODE // OPERATOR: <span>${Auth.getUsername() || "UNKNOWN"}</span></div>
+        <div class="hud-status-text">SECURED CRIMINAL DATABASE // OPERATOR: <span>${Auth.getUsername() || "UNKNOWN"}</span></div>
       </div>
       <div class="hud-right">
         <button type="button" id="theme-toggle" class="theme-toggle"></button>

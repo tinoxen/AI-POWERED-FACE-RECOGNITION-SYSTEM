@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CriminalDB · Biometric Face Search</title>
   <link rel="stylesheet" href="css/style.css">
   <script>document.documentElement.dataset.theme = localStorage.getItem("CriminalDB_theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");</script>
@@ -155,9 +156,9 @@
     <div id="no-match-state" class="glass-card warning-panel"
       style="display: none; text-align: center; padding: 48px 24px;">
       <div style="font-size: 48px; color: var(--danger); margin-bottom: 16px;">⚠️</div>
-      <h2 style="color: var(--danger);">No Matching Faces Found</h2>
+      <h2 id="no-match-title" style="color: var(--danger);">No Matching Faces Found</h2>
       <p style="color: var(--muted); font-size: 14px; max-width: 500px; margin: 0 auto 32px;">
-        The query face print does not exceed the required verification threshold (75.00%) in the system registry.
+        <span id="no-match-description">The query face print does not exceed the required verification threshold (75.00%) in the system registry.</span>
       </p>
       <button class="secondary" style="border-color: var(--danger); color: var(--danger);"
         onclick="resetSearch()">Search Again</button>
@@ -279,9 +280,14 @@
 
     let matchedResults = [];
     let queryImageDataUrl = "";
+    let scanRunId = 0;
+    let scanTimers = [];
 
     // Reset search state
     function resetSearch() {
+      scanRunId++;
+      scanTimers.forEach(clearTimeout);
+      scanTimers = [];
       document.getElementById("upload-state").style.display = "block";
       document.getElementById("scanning-state").style.display = "none";
       document.getElementById("no-match-state").style.display = "none";
@@ -335,16 +341,31 @@
     });
 
     function processSelectedFile(file) {
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+      if (!allowedTypes.includes(file.type)) {
+        showScanError("Only JPEG, PNG, or WEBP images are allowed.");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        showScanError("Image exceeds the 5MB upload limit.");
+        return;
+      }
       const reader = new FileReader();
       reader.onload = function (evt) {
         queryImageDataUrl = evt.target.result;
         runFaceSearch(file);
+      };
+      reader.onerror = function () {
+        showScanError("The selected image could not be read.");
       };
       reader.readAsDataURL(file);
     }
 
     // Run simulated face search workflow
     function runFaceSearch(file) {
+      const runId = ++scanRunId;
+      scanTimers.forEach(clearTimeout);
+      scanTimers = [];
       document.getElementById("upload-state").style.display = "none";
       document.getElementById("scanning-state").style.display = "block";
 
@@ -369,7 +390,7 @@
 
       const logs = [
         "[SYS] INITIALIZING NEURAL ENGINE CONFIGS...",
-        "[SYS] LOADING ONNX WEIGHTS FOR YUNET DETECTOR & SFACE EMBEDDER...",
+        "[SYS] LOADING YUNET DETECTOR & ARCFACE EMBEDDER...",
         "[SYS] PREPROCESSING IMAGE STREAMS TO INPUT TENSORS...",
         "[SYS] DETECTING FACE BOUNDARIES AND LOCALIZING 5-POINT LANDMARKS...",
         "[SYS] ALIGNING FACE GEOMETRIES TO CANONICAL CROP...",
@@ -380,34 +401,39 @@
 
       // Step 1: Uploading image
       activateStep(1);
-      setTimeout(() => {
+      scanTimers.push(setTimeout(() => {
+        if (runId !== scanRunId) return;
         completeStep(1, "Uploading image...");
         activateStep(2);
-      }, 400);
+      }, 400));
 
       // Step 2: Detecting face
-      setTimeout(() => {
+      scanTimers.push(setTimeout(() => {
+        if (runId !== scanRunId) return;
         completeStep(2, "Detecting face...");
         activateStep(3);
-      }, 800);
+      }, 800));
 
       // Step 3: Extracting features
-      setTimeout(() => {
+      scanTimers.push(setTimeout(() => {
+        if (runId !== scanRunId) return;
         completeStep(3, "Extracting facial features...");
         activateStep(4);
-      }, 1200);
+      }, 1200));
 
       // Step 4: Comparing with DB
-      setTimeout(() => {
+      scanTimers.push(setTimeout(() => {
+        if (runId !== scanRunId) return;
         completeStep(4, "Comparing with database...");
         activateStep(5);
-      }, 1600);
+      }, 1600));
 
       // Step 5: Finding matches & Call API
-      setTimeout(() => {
+      scanTimers.push(setTimeout(() => {
+        if (runId !== scanRunId) return;
         completeStep(5, "Finding best match...");
-        postMatchRequest(file);
-      }, 2000);
+        postMatchRequest(file, runId);
+      }, 2000));
 
       // Print log lines in parallel
       let logIdx = 0;
@@ -418,7 +444,7 @@
           div.textContent = logs[logIdx++];
           logConsole.appendChild(div);
           logConsole.scrollTop = logConsole.scrollHeight;
-          setTimeout(addLog, 220);
+          scanTimers.push(setTimeout(addLog, 220));
         }
       };
       addLog();
@@ -441,7 +467,7 @@
     }
 
     // Call REST endpoint
-    async function postMatchRequest(file) {
+    async function postMatchRequest(file, runId) {
       const formData = new FormData();
       formData.append("photo", file);
 
@@ -450,6 +476,8 @@
           method: "POST",
           body: formData
         });
+
+        if (runId !== scanRunId) return;
 
         if (!res.ok) {
           const errText = await res.text();
@@ -464,7 +492,12 @@
           return;
         }
 
-        matchedResults = await res.json();
+        const responseData = await res.json();
+        if (!Array.isArray(responseData)) {
+          showScanError("The biometric service returned an invalid response.");
+          return;
+        }
+        matchedResults = responseData.filter(match => match && Number.isFinite(Number(match.matchScore)));
         if (matchedResults.length === 0) {
           showNoMatch();
           return;
@@ -473,6 +506,7 @@
         displayMatches();
 
       } catch (err) {
+        if (runId !== scanRunId) return;
         showScanError(err.message || "Cannot establish connection to authentication node.");
       }
     }
