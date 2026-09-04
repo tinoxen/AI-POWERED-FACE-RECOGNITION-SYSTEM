@@ -60,6 +60,9 @@ The main profile reads these environment variables:
 | `APP_JWT_EXPIRATION_MS` | `3600000` | Token lifetime in milliseconds |
 | `APP_UPLOAD_DIR` | `uploads` | Filesystem directory for photos |
 | `APP_STATIC_DIR` | `./frontend` | Directory served for static frontend files |
+| `CLOUDINARY_CLOUD_NAME` | None | Cloudinary cloud name; enables Cloudinary storage when all three Cloudinary values are set |
+| `CLOUDINARY_API_KEY` | None | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | None | Cloudinary API secret |
 | `ALLOWED_ORIGINS` | Project configuration | Comma-separated CORS origins |
 | `APP_ADMIN_USERNAME`, `APP_ADMIN_PASSWORD` | None | Optional admin seed credentials |
 | `APP_OFFICER_USERNAME`, `APP_OFFICER_PASSWORD` | None | Optional officer seed credentials |
@@ -67,6 +70,13 @@ The main profile reads these environment variables:
 Set secrets through the environment and never commit real passwords, database
 credentials, JWT keys, or biometric files. The H2 profile is in-memory and loses
 its data when the backend stops.
+
+When all three Cloudinary variables are configured, new and replacement photos
+are uploaded to the `criminaldb` folder. The database stores an opaque
+`cloudinary:<public_id>` reference, while the backend continues to serve photos
+through the authenticated `/api/persons/{id}/photo` endpoint. Face recognition
+downloads Cloudinary images only into temporary processing files. Without the
+variables, local filesystem storage remains available for development.
 
 ## Local development workflow
 
@@ -87,12 +97,13 @@ cd CriminalDB/frontend
 python3 -m http.server 5500
 ```
 
-Open `http://localhost:5500/login.html`. The frontend automatically targets
-`http://localhost:10000/api` on that local port. The default CORS configuration
-allows localhost, loopback, and other local-network origins using port `5500`,
-so the app can be opened from another device on the same network. For a
-different frontend host or port, set `ALLOWED_ORIGINS` to the exact origin. To
-skip MySQL for a disposable demo, start the backend with:
+Open `http://localhost:5500/login.html`. The frontend automatically targets the
+backend on port `10000` using the same hostname, including when another device
+opens the site through `http://<computer-LAN-IP>:5500`. The default CORS
+configuration allows local-network origins using port `5500`, so authenticated
+API requests and protected photos work across devices on the same network. For
+a different frontend host or port, set `ALLOWED_ORIGINS` to the exact origin.
+To skip MySQL for a disposable demo, start the backend with:
 
 ```bash
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=h2
@@ -150,9 +161,11 @@ docker run --rm -p 10000:10000 \
 The included `render.yaml` configures a Render Docker web service and uses
 `/api/health` as its health check. Configure the database variables, a strong
 JWT secret, admin password, exact `ALLOWED_ORIGINS`, and the database provider's
-network allowlist before deploying. Render's example upload directory is
-`/tmp/uploads`, which is ephemeral; persistent storage and backups are required
-for anything beyond a disposable demo.
+network allowlist before deploying. Add `CLOUDINARY_CLOUD_NAME`,
+`CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` in Render to persist new
+photos outside Render's ephemeral `/tmp/uploads` directory. Existing local
+filesystem photos must be migrated separately before deleting the old upload
+directory.
 
 ## Responsible-use checklist
 
@@ -303,7 +316,7 @@ you serve the frontend elsewhere.
 | OFFICER | Everything VIEWER can, plus add new records |
 | ADMIN   | Everything OFFICER can, plus edit/delete records and view audit logs |
 
-Static assets, including the logo in `frontend/assets/`, are served through the
+Static assets, including the SVG logo in `frontend/assets/`, are served through the
 backend and explicitly permitted by Spring Security. Record photos remain
 protected API resources and are loaded with the JWT rather than as public file
 paths.

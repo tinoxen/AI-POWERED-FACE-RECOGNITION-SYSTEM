@@ -23,6 +23,15 @@ services:
       - key: APP_UPLOAD_DIR
         value: /tmp/uploads
 
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+
+      - key: CLOUDINARY_API_KEY
+        sync: false
+
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
       - key: ALLOWED_ORIGINS
         value: https://criminaldb-lu4d.onrender.com
 

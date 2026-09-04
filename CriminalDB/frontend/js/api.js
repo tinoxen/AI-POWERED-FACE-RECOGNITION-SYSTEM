@@ -4,12 +4,10 @@ function resolveApiBase() {
   const override = window.__API_BASE__ || window.API_BASE_URL || "";
   if (override) return override.replace(/\/$/, "");
 
-  // During local development the static frontend is commonly served on
-  // localhost:5500 while Spring Boot listens on port 10000. In production
-  // both are served by Spring Boot, so a relative URL remains the right one.
-  const isLocalStaticServer =
-    ["localhost", "127.0.0.1"].includes(window.location.hostname) &&
-    window.location.port === "5500";
+  // During local development the static frontend is served on port 5500 while
+  // Spring Boot listens on port 10000. Use the same hostname so LAN devices
+  // can authenticate and load protected photos from the development machine.
+  const isLocalStaticServer = window.location.port === "5500";
   if (isLocalStaticServer) {
     return `${window.location.protocol}//${window.location.hostname}:10000/api`;
   }
@@ -29,7 +27,11 @@ async function loadProtectedImage(imageElement, photoUrl) {
     const response = await apiFetch(photoUrl);
     if (!response.ok) return;
     const blob = await response.blob();
-    imageElement.src = URL.createObjectURL(blob);
+    const previousUrl = imageElement.dataset.objectUrl;
+    if (previousUrl) URL.revokeObjectURL(previousUrl);
+    const objectUrl = URL.createObjectURL(blob);
+    imageElement.dataset.objectUrl = objectUrl;
+    imageElement.src = objectUrl;
   } catch (_) {
     imageElement.removeAttribute("src");
   }
@@ -160,7 +162,7 @@ function initTopbar(activePage) {
   const sidebarHtml = `
     <div class="sidebar">
       <div class="brand-title">
-        <img class="brand-logo" src="assets/Shield-logo.png" alt="CriminalDB shield">
+        <img class="brand-logo" src="assets/shield-logo.svg" alt="CriminalDB shield">
         <span class="brand-name">CriminalDB</span>
       </div>
       <div class="sidebar-nav">

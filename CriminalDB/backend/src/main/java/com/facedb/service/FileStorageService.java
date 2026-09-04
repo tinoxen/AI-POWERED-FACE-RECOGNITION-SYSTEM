@@ -16,11 +16,23 @@ import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class FileStorageService {
+
+    private final CloudinaryStorageService cloudinaryStorageService;
+
+    public FileStorageService() {
+        cloudinaryStorageService = new CloudinaryStorageService();
+    }
+
+    @Autowired
+    public FileStorageService(CloudinaryStorageService cloudinaryStorageService) {
+        this.cloudinaryStorageService = cloudinaryStorageService;
+    }
 
     @Value("${app.upload-dir:uploads}")
     private String uploadDir;
@@ -80,6 +92,13 @@ public class FileStorageService {
             if (image == null || !ImageIO.write(image, "webp", target.toFile())) {
                 throw new IllegalArgumentException("Uploaded image could not be converted to WebP");
             }
+            if (cloudinaryStorageService.isConfigured()) {
+                try {
+                    return cloudinaryStorageService.upload(target);
+                } finally {
+                    Files.deleteIfExists(target);
+                }
+            }
             return target.toString();
         } catch (IOException e) {
             throw new RuntimeException("Failed to store file", e);
@@ -103,6 +122,53 @@ public class FileStorageService {
             throw new IllegalArgumentException("Stored file path is outside the upload directory");
         }
         return resolved;
+    }
+
+    public boolean isCloudinaryReference(String storedPath) {
+        return cloudinaryStorageService.isReference(storedPath);
+    }
+
+    public InputStream openStoredStream(String storedPath) throws IOException {
+        if (isCloudinaryReference(storedPath)) {
+            return cloudinaryStorageService.openStream(storedPath);
+        }
+        return Files.newInputStream(resolveStoredPath(storedPath));
+    }
+
+    public Path materializeForProcessing(String storedPath) throws IOException {
+        if (!isCloudinaryReference(storedPath)) {
+            return resolveStoredPath(storedPath);
+        }
+        Path temporaryFile = Files.createTempFile("criminaldb-face-", ".webp");
+        try (InputStream input = openStoredStream(storedPath)) {
+            Files.copy(input, temporaryFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException | RuntimeException e) {
+            Files.deleteIfExists(temporaryFile);
+            throw e;
+        }
+        return temporaryFile;
+    }
+
+    public void cleanupProcessingFile(String storedPath, Path processingFile) {
+        if (isCloudinaryReference(storedPath)) {
+            try {
+                Files.deleteIfExists(processingFile);
+            } catch (IOException ignored) {
+                // Temporary cleanup must not hide the recognition result.
+            }
+        }
+    }
+
+    public void deleteStored(String storedPath) {
+        if (isCloudinaryReference(storedPath)) {
+            cloudinaryStorageService.delete(storedPath);
+            return;
+        }
+        try {
+            Files.deleteIfExists(resolveStoredPath(storedPath));
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to delete stored image", e);
+        }
     }
 
     private String extensionFor() { return ".webp"; }

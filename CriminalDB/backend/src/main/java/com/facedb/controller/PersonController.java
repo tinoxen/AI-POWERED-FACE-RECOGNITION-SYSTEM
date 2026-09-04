@@ -5,7 +5,9 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -62,10 +64,15 @@ public class PersonController {
     }
 
     @GetMapping("/{id}/photo")
-    public ResponseEntity<FileSystemResource> photo(@PathVariable Long id) {
+    public ResponseEntity<Resource> photo(@PathVariable Long id) throws java.io.IOException {
         Person p = personService.findById(id);
         if (p.getPhotoPath() == null) {
             return ResponseEntity.notFound().build();
+        }
+        if (fileStorageService.isCloudinaryReference(p.getPhotoPath())) {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("image/webp"))
+                    .body(new InputStreamResource(fileStorageService.openStoredStream(p.getPhotoPath())));
         }
         java.nio.file.Path photoPath = fileStorageService.resolveStoredPath(p.getPhotoPath());
         if (!java.nio.file.Files.exists(photoPath)) return ResponseEntity.notFound().build();
@@ -97,8 +104,8 @@ public class PersonController {
             return personService.findTopMatches(queryEmbedding, 5);
         } finally {
             try {
-                java.nio.file.Files.deleteIfExists(fileStorageService.resolveStoredPath(path));
-            } catch (java.io.IOException | SecurityException | IllegalArgumentException ignored) {}
+                fileStorageService.deleteStored(path);
+            } catch (RuntimeException ignored) {}
         }
     }
 
@@ -203,8 +210,8 @@ public class PersonController {
         Person saved = personService.save(p);
         if (previousPhotoPath != null && !previousPhotoPath.equals(path)) {
             try {
-                java.nio.file.Files.deleteIfExists(fileStorageService.resolveStoredPath(previousPhotoPath));
-            } catch (java.io.IOException | SecurityException | IllegalArgumentException e) {
+                fileStorageService.deleteStored(previousPhotoPath);
+            } catch (RuntimeException e) {
                 log.warn("Could not remove replaced photo for person {}", id, e);
             }
         }
@@ -257,8 +264,8 @@ public class PersonController {
         Person deleted = personService.delete(id);
         if (deleted.getPhotoPath() != null) {
             try {
-                java.nio.file.Files.deleteIfExists(fileStorageService.resolveStoredPath(deleted.getPhotoPath()));
-            } catch (java.io.IOException | SecurityException | IllegalArgumentException e) {
+                fileStorageService.deleteStored(deleted.getPhotoPath());
+            } catch (RuntimeException e) {
                 log.warn("Could not remove deleted photo for person {}", id, e);
             }
         }

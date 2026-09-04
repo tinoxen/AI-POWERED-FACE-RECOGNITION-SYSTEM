@@ -121,8 +121,10 @@ public class PersonService {
 
     public String extractFaceEmbedding(String photoPath) {
         if (photoPath == null) return null;
+        Path processingPath = null;
         try {
-            String absolutePath = new java.io.File(photoPath).getAbsolutePath();
+            processingPath = fileStorageService.materializeForProcessing(photoPath);
+            String absolutePath = processingPath.toAbsolutePath().toString();
             String scriptPath = "scripts/extract_embedding.py";
             if (!Files.exists(Paths.get(scriptPath))) {
                 scriptPath = "backend/scripts/extract_embedding.py";
@@ -174,6 +176,10 @@ public class PersonService {
             throw new RuntimeException("Face recognition service was interrupted", e);
         } catch (java.io.IOException e) {
             throw new RuntimeException("Failed to run face recognition service", e);
+        } finally {
+            if (processingPath != null) {
+                fileStorageService.cleanupProcessingFile(photoPath, processingPath);
+            }
         }
     }
 
