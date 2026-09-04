@@ -106,7 +106,8 @@ public class SecurityConfig {
 
                     "/css/**",
                     "/js/**",
-                    "/images/**"
+                    "/images/**",
+                    "/assets/**"
                 ).permitAll()
 
                 // ==============================
@@ -168,7 +169,11 @@ public class SecurityConfig {
                 allowedOrigins.isBlank()) {
 
             configuration.setAllowedOriginPatterns(
-                List.of("http://localhost:5500", "http://127.0.0.1:5500")
+                List.of(
+                    "http://localhost:5500",
+                    "http://127.0.0.1:5500",
+                    "http://*:5500"
+                )
             );
 
         } else {

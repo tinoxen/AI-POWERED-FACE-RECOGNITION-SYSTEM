@@ -1,11 +1,170 @@
-# CriminalDB — Biometric-Based Record Lookup (FYP Prototype)
+# CriminalDB — Biometric-Based Record Lookup
 
-A prototype web application for managing person records with a face
-photo, built for a final-year project. **Uses synthetic demo data by
-default; it is a prototype, not a real production law-enforcement system.**
-Face matching itself is real: photos are compared with actual ArcFace
-embeddings, not a placeholder.
+CriminalDB is a final-year-project prototype for managing person records and
+searching them with face-image similarity. It combines a static browser
+frontend, a Spring Boot API, MySQL/H2 persistence, JWT authentication, and a
+Python YuNet/ArcFace embedding pipeline.
 
+> **Prototype and responsible-use notice:** This system is intended for
+> education, demonstrations, and controlled testing. It uses biometric data
+> and must not be used for real law-enforcement decisions without legal,
+> ethical, privacy, accuracy, bias, and human-review controls.
+
+## API reference
+
+All protected requests require an `Authorization: Bearer <jwt>` header.
+
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| `POST` | `/api/auth/login` | Public | Authenticate and receive a JWT, username, and role |
+| `GET` | `/api/health` | Public | Health check used by Docker and Render |
+| `GET` | `/api/persons?q=<text>` | Authenticated | List or search records |
+| `GET` | `/api/persons/{id}` | Authenticated | View one record |
+| `GET` | `/api/persons/{id}/photo` | Authenticated | Stream a protected photo |
+| `POST` | `/api/persons` | `OFFICER`, `ADMIN` | Create a multipart record with a `photo` field |
+| `PUT` | `/api/persons/{id}` | `OFFICER`, `ADMIN` | Update record fields as JSON |
+| `POST` | `/api/persons/{id}/photo` | `OFFICER`, `ADMIN` | Replace a record photo |
+| `DELETE` | `/api/persons/{id}` | `OFFICER`, `ADMIN` | Delete a record |
+| `POST` | `/api/persons/match` | Authenticated | Match a multipart query photo; returns up to five results |
+| `GET` | `/api/audit` | `ADMIN` | Retrieve audit entries |
+| `POST` | `/api/persons/clean-orphans` | `ADMIN` | Remove unreferenced upload files |
+| `POST` | `/api/persons/convert-existing-photos` | `ADMIN` | Convert stored photos to WebP |
+
+Login request example:
+
+```json
+{
+  "username": "admin",
+  "password": "your-password"
+}
+```
+
+Create requests use multipart form data. Required record fields are `fullName`,
+`criminalId`, `crimeCategory`, `firNumber`, `policeStation`, `currentStatus`,
+`dateOfBirth`, `arrestDate`, and `photo`; the other profile and case fields are
+optional. Uploads are limited to 5 MB. A stored photo that cannot produce a
+usable face embedding remains available for record viewing but is excluded from
+face-match results until the photo is replaced.
+
+## Configuration reference
+
+The main profile reads these environment variables:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `10000` | HTTP listening port |
+| `DB_HOST`, `DB_PORT` | None | MySQL/TiDB connection host and port |
+| `DB_NAME` | None | Database name |
+| `DB_USERNAME`, `DB_PASSWORD` | None | Database credentials |
+| `APP_JWT_SECRET` | None | Required JWT signing secret |
+| `APP_JWT_EXPIRATION_MS` | `3600000` | Token lifetime in milliseconds |
+| `APP_UPLOAD_DIR` | `uploads` | Filesystem directory for photos |
+| `APP_STATIC_DIR` | `./frontend` | Directory served for static frontend files |
+| `ALLOWED_ORIGINS` | Project configuration | Comma-separated CORS origins |
+| `APP_ADMIN_USERNAME`, `APP_ADMIN_PASSWORD` | None | Optional admin seed credentials |
+| `APP_OFFICER_USERNAME`, `APP_OFFICER_PASSWORD` | None | Optional officer seed credentials |
+
+Set secrets through the environment and never commit real passwords, database
+credentials, JWT keys, or biometric files. The H2 profile is in-memory and loses
+its data when the backend stops.
+
+## Local development workflow
+
+```bash
+# MySQL schema/reference setup
+cd CriminalDB
+mysql -u root -p < database/schema.sql
+
+# Start the API
+cd backend
+export APP_JWT_SECRET='replace-with-a-long-random-secret'
+export APP_ADMIN_USERNAME=admin
+export APP_ADMIN_PASSWORD='replace-with-a-strong-password'
+./mvnw spring-boot:run
+
+# In another terminal, serve the static frontend
+cd CriminalDB/frontend
+python3 -m http.server 5500
+```
+
+Open `http://localhost:5500/login.html`. The frontend automatically targets
+`http://localhost:10000/api` on that local port. The default CORS configuration
+allows localhost, loopback, and other local-network origins using port `5500`,
+so the app can be opened from another device on the same network. For a
+different frontend host or port, set `ALLOWED_ORIGINS` to the exact origin. To
+skip MySQL for a disposable demo, start the backend with:
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=h2
+```
+
+Run backend tests and package the JAR with:
+
+```bash
+./mvnw test
+./mvnw clean package
+```
+
+The root `package.json` exposes equivalent deployment commands: `npm run build`
+builds without tests and `npm start` runs the packaged JAR.
+
+## Face-matching pipeline
+
+`extract_embedding.py` processes every new photo, replacement photo, and query:
+
+1. Checks readability, dimensions, brightness, sharpness, and face count.
+2. Detects the face and five landmarks with YuNet.
+3. Aligns it to the standard ArcFace 112x112 template.
+4. Generates a 512-dimensional, L2-normalized ArcFace embedding.
+5. Stores embeddings as comma-separated text and ranks queries by cosine similarity.
+
+Docker downloads the YuNet and ArcFace ONNX models during image build. Local
+execution downloads them lazily into `backend/scripts/models/`:
+
+```bash
+cd CriminalDB/backend
+pip install -r scripts/requirements.txt
+python3 scripts/extract_embedding.py /path/to/photo.jpg
+```
+
+The similarity cutoff and confidence mapping are prototype tuning choices in
+`PersonService`; a similarity score is not proof of identity and must not be
+used without an appropriate, consented evaluation and human review process.
+
+## Deployment notes
+
+`CriminalDB/Dockerfile` builds the Spring Boot application, installs Python
+inference dependencies, downloads the ONNX models, and serves the frontend and
+API from one container. Build it from the `CriminalDB` directory:
+
+```bash
+cd CriminalDB
+docker build -t criminaldb .
+docker run --rm -p 10000:10000 \
+  -e APP_JWT_SECRET='replace-with-a-long-random-secret' \
+  -e DB_HOST='<mysql-host>' -e DB_PORT=3306 -e DB_NAME=facedb \
+  -e DB_USERNAME='<database-user>' -e DB_PASSWORD='<database-password>' \
+  criminaldb
+```
+
+The included `render.yaml` configures a Render Docker web service and uses
+`/api/health` as its health check. Configure the database variables, a strong
+JWT secret, admin password, exact `ALLOWED_ORIGINS`, and the database provider's
+network allowlist before deploying. Render's example upload directory is
+`/tmp/uploads`, which is ephemeral; persistent storage and backups are required
+for anything beyond a disposable demo.
+
+## Responsible-use checklist
+
+- Use only synthetic or explicitly consented test images during development.
+- Enable HTTPS, least-privilege database permissions, restricted CORS, and secret rotation.
+- Add retention, deletion, consent, access-request, and incident-response policies.
+- Evaluate false matches, missed matches, demographic performance, and threshold behavior.
+- Treat audit logs and biometric embeddings as highly sensitive data.
+- Add migrations, rate limiting, monitoring, persistent storage, and independent security review before production use.
+
+CriminalDB is a final-year-project prototype with a real face-embedding pipeline,
+not a production law-enforcement system.
 ## Stack
 
 - **Frontend:** HTML / CSS / vanilla JavaScript
@@ -143,6 +302,11 @@ you serve the frontend elsewhere.
 | VIEWER  | Log in, view/search records |
 | OFFICER | Everything VIEWER can, plus add new records |
 | ADMIN   | Everything OFFICER can, plus edit/delete records and view audit logs |
+
+Static assets, including the logo in `frontend/assets/`, are served through the
+backend and explicitly permitted by Spring Security. Record photos remain
+protected API resources and are loaded with the JWT rather than as public file
+paths.
 
 ## About the face-matching pipeline
 
