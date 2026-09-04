@@ -1,9 +1,9 @@
 package com.facedb.dto;
 
 public class LoginResponse {
-    private String token;
-    private String username;
-    private String role;
+    private final String token;
+    private final String username;
+    private final String role;
 
     public LoginResponse(String token, String username, String role) {
         this.token = token;

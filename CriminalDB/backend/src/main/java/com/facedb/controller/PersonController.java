@@ -98,7 +98,7 @@ public class PersonController {
         } finally {
             try {
                 java.nio.file.Files.deleteIfExists(fileStorageService.resolveStoredPath(path));
-            } catch (Exception ignored) {}
+            } catch (java.io.IOException | SecurityException | IllegalArgumentException ignored) {}
         }
     }
 
@@ -140,19 +140,15 @@ public class PersonController {
         p.setCurrentStatus(currentStatus);
         p.setCreatedBy(auth.getName());
 
-        if (photo != null && !photo.isEmpty()) {
-            String path = fileStorageService.store(photo);
-            p.setPhotoPath(path);
-            try {
-                p.setFaceEmbedding(personService.extractFaceEmbedding(path));
-            } catch (RuntimeException e) {
-                // A record can still be registered even when the uploaded
-                // image cannot produce a usable biometric template. It will
-                // be excluded from face-match results until its photo is
-                // replaced with a suitable image.
-                log.warn("Created record without a face embedding for {}: {}",
-                        fullName, e.getMessage());
-            }
+        String path = fileStorageService.store(photo);
+        p.setPhotoPath(path);
+        try {
+            p.setFaceEmbedding(personService.extractFaceEmbedding(path));
+        } catch (RuntimeException e) {
+            // A record can still be registered when an image cannot produce a
+            // usable biometric template.
+            log.warn("Created record without a face embedding for {}: {}",
+                    fullName, e.getMessage());
         }
 
         Person saved = personService.save(p);
@@ -208,7 +204,7 @@ public class PersonController {
         if (previousPhotoPath != null && !previousPhotoPath.equals(path)) {
             try {
                 java.nio.file.Files.deleteIfExists(fileStorageService.resolveStoredPath(previousPhotoPath));
-            } catch (Exception e) {
+            } catch (java.io.IOException | SecurityException | IllegalArgumentException e) {
                 log.warn("Could not remove replaced photo for person {}", id, e);
             }
         }
@@ -262,7 +258,7 @@ public class PersonController {
         if (deleted.getPhotoPath() != null) {
             try {
                 java.nio.file.Files.deleteIfExists(fileStorageService.resolveStoredPath(deleted.getPhotoPath()));
-            } catch (Exception e) {
+            } catch (java.io.IOException | SecurityException | IllegalArgumentException e) {
                 log.warn("Could not remove deleted photo for person {}", id, e);
             }
         }

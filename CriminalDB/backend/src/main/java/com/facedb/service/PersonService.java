@@ -38,20 +38,19 @@ public class PersonService {
                 .findByFullNameContainingIgnoreCaseOrCriminalIdContainingIgnoreCaseOrFirNumberContainingIgnoreCase(
                         normalizedQuery, normalizedQuery, normalizedQuery);
         if (normalizedQuery.matches("\\d+")) {
-            Long databaseId;
             try {
-                databaseId = Long.parseLong(normalizedQuery);
+                Long databaseId = Long.valueOf(normalizedQuery);
+                return personRepository.findById(databaseId)
+                        .<List<Person>>map(person -> {
+                            java.util.LinkedHashMap<Long, Person> results = new java.util.LinkedHashMap<>();
+                            results.put(person.getId(), person);
+                            fieldMatches.forEach(match -> results.putIfAbsent(match.getId(), match));
+                            return new java.util.ArrayList<>(results.values());
+                        })
+                        .orElse(fieldMatches);
             } catch (NumberFormatException e) {
                 return fieldMatches;
             }
-            return personRepository.findById(databaseId)
-                    .<List<Person>>map(person -> {
-                        java.util.LinkedHashMap<Long, Person> results = new java.util.LinkedHashMap<>();
-                        results.put(person.getId(), person);
-                        fieldMatches.forEach(match -> results.putIfAbsent(match.getId(), match));
-                        return new java.util.ArrayList<>(results.values());
-                    })
-                    .orElse(fieldMatches);
         }
         return fieldMatches;
     }
@@ -112,7 +111,7 @@ public class PersonService {
                 person.setPhotoPath(targetPath.toString());
                 personRepository.save(person);
                 convertedCount++;
-            } catch (Exception ignored) {
+            } catch (java.io.IOException | RuntimeException ignored) {
                 // Skip files we cannot convert and continue with the rest.
             }
         }
@@ -168,10 +167,12 @@ public class PersonService {
                 }
             }
             return embedding;
-        } catch (Exception e) {
-            if (e instanceof IllegalArgumentException) {
-                throw (IllegalArgumentException) e;
-            }
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Face recognition service was interrupted", e);
+        } catch (java.io.IOException e) {
             throw new RuntimeException("Failed to run face recognition service", e);
         }
     }
@@ -198,7 +199,7 @@ public class PersonService {
             
             if (normA == 0.0 || normB == 0.0) return 0.0;
             return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
             return 0.0;
         }
     }
