@@ -11,6 +11,10 @@ API_BASE = os.getenv("CRIMINALDB_API_BASE", "http://localhost:10000/api").rstrip
 ADMIN_USERNAME = os.getenv("CRIMINALDB_USERNAME") or os.getenv("APP_ADMIN_USERNAME")
 ADMIN_PASSWORD = os.getenv("CRIMINALDB_PASSWORD") or os.getenv("APP_ADMIN_PASSWORD")
 WIPE_EXISTING = os.getenv("CRIMINALDB_WIPE_EXISTING", "false").lower() == "true"
+AI_FACE_URL = os.getenv(
+  "CRIMINALDB_AI_FACE_URL",
+  "https://thispersondoesnotexist.com/random-person.jpeg",
+)
 
 # --- Fictional Dataset Source Arrays ---
 first_names_male = ["James", "John", "Robert", "Michael", "William", "David", "Richard", "Joseph", "Thomas", "Charles", "Christopher", "Daniel", "Matthew", "Anthony", "Mark", "Donald", "Steven", "Paul", "Andrew", "Joshua", "Kenneth", "Kevin", "Brian", "George", "Edward", "Ronald", "Timothy", "Jason", "Jeffrey", "Ryan", "Jacob", "Gary", "Nicholas", "Eric", "Jonathan", "Stephen", "Larry", "Justin", "Scott", "Brandon", "Benjamin", "Samuel", "Gregory", "Frank", "Alexander", "Raymond", "Patrick", "Jack", "Dennis", "Jerry"]
@@ -178,24 +182,19 @@ def main():
 
     print("[2/3] Registering 20 classified profiles...", flush=True)
 
-    used_photos = set()
-    
     for i in range(20):
         # Determine Gender (Alternate 10 Male, 10 Female)
         gender = "Male" if i < 10 else "Female"
-        photo_idx = (i % 10) + 1  # 1 to 10
-        
-        # Download unique photo from RandomUser me
-        gender_path = "men" if gender == "Male" else "women"
-        photo_url = f"https://randomuser.me/api/portraits/{gender_path}/{photo_idx}.jpg"
+        # Download a fictional AI-generated portrait. The unique query token
+        # prevents an intermediary cache from returning the same face twice.
+        photo_url = f"{AI_FACE_URL}?record={i + 1}-{uuid.uuid4().hex}"
         
         try:
-            # Set user agent to bypass blockers
             photo_req = urllib.request.Request(photo_url, headers={"User-Agent": "Mozilla/5.0"})
             with urllib.request.urlopen(photo_req) as photo_res:
                 photo_bytes = photo_res.read()
         except Exception as e:
-            print(f"Skipping index {i}: Failed to download photo from RandomUser. {e}", flush=True)
+            print(f"Skipping index {i}: Failed to download AI portrait. {e}", flush=True)
             continue
             
         # Select Names

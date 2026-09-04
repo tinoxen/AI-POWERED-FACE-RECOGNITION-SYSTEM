@@ -37,7 +37,7 @@ class FileStorageServiceTest {
 
         Path resolved = service.resolveStoredPath(storedPath);
         assertTrue(resolved.startsWith(tempDirectory.toAbsolutePath()));
-        assertTrue(resolved.getFileName().toString().endsWith(".png"));
+        assertTrue(resolved.getFileName().toString().endsWith(".webp"));
         assertTrue(java.nio.file.Files.exists(resolved));
     }
 

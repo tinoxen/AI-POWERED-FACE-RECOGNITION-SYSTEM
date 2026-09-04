@@ -1,20 +1,23 @@
 package com.facedb.service;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Iterator;
+import java.util.List;
+import java.util.UUID;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.Iterator;
-import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class FileStorageService {
@@ -39,8 +42,11 @@ public class FileStorageService {
         }
 
         try {
+            byte[] imageBytes = file.getBytes();
             String imageFormat;
-            try (ImageInputStream imageInput = ImageIO.createImageInputStream(file.getInputStream())) {
+            BufferedImage image;
+            try (InputStream imageStream = new ByteArrayInputStream(imageBytes);
+                 ImageInputStream imageInput = ImageIO.createImageInputStream(imageStream)) {
                 if (imageInput == null) {
                     throw new IllegalArgumentException("Uploaded file is not a valid image");
                 }
@@ -56,6 +62,7 @@ public class FileStorageService {
                     reader.dispose();
                 }
             }
+            image = ImageIO.read(new ByteArrayInputStream(imageBytes));
             if (!(imageFormat.equals("jpeg") || imageFormat.equals("jpg")
                     || imageFormat.equals("png") || imageFormat.equals("webp"))) {
                 throw new IllegalArgumentException("Only JPEG, PNG, or WEBP images are allowed");
@@ -64,16 +71,15 @@ public class FileStorageService {
             Path dir = getUploadDirectory();
             Files.createDirectories(dir);
 
-            String filename = UUID.randomUUID() + extensionFor(imageFormat);
+            String filename = UUID.randomUUID() + extensionFor();
             Path target = dir.resolve(filename).normalize();
             if (!target.startsWith(dir)) {
                 throw new IllegalArgumentException("Invalid file path");
             }
 
-            // Preserve the validated source image. Re-encoding each upload
-            // as WebP depends on an optional ImageIO codec and can make a
-            // valid record submission fail before it reaches the database.
-            Files.copy(file.getInputStream(), target);
+            if (image == null || !ImageIO.write(image, "webp", target.toFile())) {
+                throw new IllegalArgumentException("Uploaded image could not be converted to WebP");
+            }
             return target.toString();
         } catch (IOException e) {
             throw new RuntimeException("Failed to store file", e);
@@ -99,11 +105,5 @@ public class FileStorageService {
         return resolved;
     }
 
-    private String extensionFor(String imageFormat) {
-        return switch (imageFormat) {
-            case "png" -> ".png";
-            case "webp" -> ".webp";
-            default -> ".jpg";
-        };
-    }
+    private String extensionFor() { return ".webp"; }
 }
