@@ -160,7 +160,8 @@ function initTopbar(activePage) {
   const sidebarHtml = `
     <div class="sidebar">
       <div class="brand-title">
-        <img class="brand-logo" src="assets/criminaldb-logo.svg" alt="CriminalDB">
+        <img class="brand-logo" src="assets/Shield-logo.png" alt="CriminalDB shield">
+        <span class="brand-name">CriminalDB</span>
       </div>
       <div class="sidebar-nav">
         ${links.map(l => `
