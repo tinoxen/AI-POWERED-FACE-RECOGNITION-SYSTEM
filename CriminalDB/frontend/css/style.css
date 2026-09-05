@@ -149,6 +149,7 @@ tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent) !imp
 
 .center-screen { display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 24px; }
 .login-card { width: min(420px, 100%); padding: 36px; }
+.login-card > .theme-toggle { position: absolute; top: 16px; right: 16px; z-index: 1; }
 .login-logo { position: relative; margin-bottom: 26px; padding-bottom: 20px; text-align: center; }
 .login-logo::after { position: absolute; bottom: 0; left: 50%; width: 74px; height: 2px; transform: translateX(-50%); background: linear-gradient(90deg, transparent, var(--accent), transparent); content: ''; }
 .login-brand { display: flex; align-items: center; justify-content: center; gap: 14px; }
