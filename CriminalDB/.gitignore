@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.venv/
+venv/
+ENV/
+env/
+.python-version
+
+# Virtual environments / environment files
+.env
+.env.*
+*.env
+
+# Jupyter / notebooks
+.ipynb_checkpoints/
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# Java / Maven / Gradle
+target/
+build/
+out/
+.gradle/
+*.class
+*.jar
+*.war
+*.ear
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project-specific generated/uploaded content
+uploads/*
+!uploads/.gitkeep
+backend/uploads/
+*.sqlite
+*.db
+*.log
+
+# Data/model artifacts
+*.onnx
+*.pt
+*.pth
+*.bin
+*.h5
+*.npz
+*.npy
+*.csv
+*.jsonl
+*.parquet
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Local toolchains and build artifacts
+tools/
+target/
+*.class

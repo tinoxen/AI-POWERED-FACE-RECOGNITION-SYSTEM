@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 300" role="img" aria-labelledby="logo-title logo-desc">
+  <title id="logo-title">CriminalDB shield</title>
+  <desc id="logo-desc">A blue biometric shield with a courthouse, search lens, barcode, and data blocks.</desc>
+  <defs>
+    <linearGradient id="edge" x1="25" y1="20" x2="225" y2="280" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#35d8f5"/><stop offset="1" stop-color="#087f8c"/>
+    </linearGradient>
+    <linearGradient id="silver" x1="54" y1="48" x2="205" y2="255" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f7fcff"/><stop offset=".5" stop-color="#8a9aa5"/><stop offset="1" stop-color="#e7f4f7"/>
+    </linearGradient>
+    <radialGradient id="lens" cx="38%" cy="30%">
+      <stop stop-color="#a7f7ff"/><stop offset=".55" stop-color="#20c9e7"/><stop offset="1" stop-color="#07527e"/>
+    </radialGradient>
+  </defs>
+  <path d="M128 8 236 47v76c0 76-42 132-108 165C62 255 20 199 20 123V47L128 8Z" fill="#102a33" stroke="url(#edge)" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M128 29 214 60v63c0 60-31 105-86 136-55-31-86-76-86-136V60l86-31Z" fill="none" stroke="url(#silver)" stroke-width="7"/>
+  <path d="M128 40 201 67v55c0 51-25 91-73 119-48-28-73-68-73-119V67l73-27Z" fill="#0f6877"/>
+  <g fill="none" stroke="#27d8ee" stroke-linecap="round" stroke-width="3">
+    <path d="M128 51v12M128 188v12M64 122h12M180 122h12"/>
+    <path d="M91 101c10-12 22-18 37-18s27 6 37 18M91 139c10 12 22 18 37 18s27-6 37-18"/>
+  </g>
+  <g fill="url(#silver)" stroke="#758995" stroke-width="2">
+    <path d="M71 99h114l-10-10H81z"/>
+    <path d="M81 89c5-9 13-14 22-14s17 5 22 14c5-9 13-14 22-14s17 5 22 14" fill="none" stroke-width="5"/>
+    <path d="M94 101v50M109 101v50M147 101v50M162 101v50" stroke-width="7"/>
+    <path d="M87 151h82v8H87zM78 164h100v7H78z"/>
+  </g>
+  <g stroke="#20d9ed" stroke-width="3">
+    <path d="M61 107v34M66 107v34M71 107v34M76 107v34M181 107v34M186 107v34M191 107v34M196 107v34"/>
+    <path d="M78 217h100M88 229h80" stroke-linecap="round"/>
+    <path d="M88 241h19v18H88zM116 241h19v18h-19zM144 241h19v18h-19zM88 264h19v18H88zM116 264h19v18h-19z" fill="none"/>
+  </g>
+  <circle cx="128" cy="124" r="31" fill="#102a33" stroke="url(#silver)" stroke-width="7"/>
+  <circle cx="128" cy="124" r="22" fill="url(#lens)" stroke="#d8f8fb" stroke-width="3"/>
+  <path d="M141 140 174 173" fill="none" stroke="url(#silver)" stroke-linecap="round" stroke-width="11"/>
+  <path d="M118 113c5-7 12-9 18-5" fill="none" stroke="#e9ffff" stroke-linecap="round" stroke-width="4"/>
+</svg>
